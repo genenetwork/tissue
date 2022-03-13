@@ -25,7 +25,6 @@
         (srfi srfi-37)
         (srfi srfi-171)
         (srfi srfi-171 gnu)
-        (ice-9 ftw)
         (ice-9 match)
         (ice-9 popen)
         (ice-9 regex)
