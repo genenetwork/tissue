@@ -172,41 +172,51 @@ strings, and return them as a list."
      "--" file)
     result))
 
-(define (issues)
-  "Return a list of all issues, sorted oldest first."
-  ;; Get all gemini files except README.gmi and hidden files. Text
-  ;; editors tend to create hidden files while editing, and we want to
-  ;; avoid them.
-  (sort (call-with-input-pipe
-         (lambda (port)
-           (port-transduce
-            (tfilter-map (lambda (file)
-                           (and (string-suffix? ".gmi" file)
-                                (not (string=? (basename file) "README.gmi"))
-                                (not (string-prefix? "." (basename file)))
-                                (let* ((file-details (file-details file))
-                                       (all-keywords (hashtable-ref file-details 'keywords '())))
-                                  (issue file
-                                         ;; Fallback to filename if title has no alphabetic
-                                         ;; characters.
-                                         (let ((title (hashtable-ref file-details 'title "")))
-                                           (if (string-any char-set:letter title) title file))
-                                         (hashtable-ref file-details 'creator #f)
-                                         (hashtable-ref file-details 'created-date #f)
-                                         (hashtable-ref file-details 'created-relative-date #f)
-                                         (hashtable-ref file-details 'last-updater #f)
-                                         (hashtable-ref file-details 'last-updated-date #f)
-                                         (hashtable-ref file-details 'last-updated-relative-date #f)
-                                         (hashtable-ref file-details 'assigned '())
-                                         ;; "closed" is a special keyword to indicate
-                                         ;; the open/closed status of an issue.
-                                         (delete "closed" all-keywords)
-                                         (not (member "closed" all-keywords))
-                                         (hashtable-ref file-details 'tasks 0)
-                                         (hashtable-ref file-details 'completed-tasks 0)
-                                         (hashtable-ref file-details 'posts #f))))))
-            rcons get-line port))
-         "git" "ls-files")
-        (lambda (issue1 issue2)
-          (< (issue-created-date issue1)
-             (issue-created-date issue2)))))
+(define (memoize-thunk thunk)
+  "Return a function memoizing THUNK."
+  (let ((result #f))
+    (lambda ()
+      (unless result
+        (set! result (thunk)))
+      result)))
+
+(define issues
+  (memoize-thunk
+   (lambda ()
+     "Return a list of all issues, sorted oldest first."
+     ;; Get all gemini files except README.gmi and hidden files. Text
+     ;; editors tend to create hidden files while editing, and we want to
+     ;; avoid them.
+     (sort (call-with-input-pipe
+            (lambda (port)
+              (port-transduce
+               (tfilter-map (lambda (file)
+                              (and (string-suffix? ".gmi" file)
+                                   (not (string=? (basename file) "README.gmi"))
+                                   (not (string-prefix? "." (basename file)))
+                                   (let* ((file-details (file-details file))
+                                          (all-keywords (hashtable-ref file-details 'keywords '())))
+                                     (issue file
+                                            ;; Fallback to filename if title has no alphabetic
+                                            ;; characters.
+                                            (let ((title (hashtable-ref file-details 'title "")))
+                                              (if (string-any char-set:letter title) title file))
+                                            (hashtable-ref file-details 'creator #f)
+                                            (hashtable-ref file-details 'created-date #f)
+                                            (hashtable-ref file-details 'created-relative-date #f)
+                                            (hashtable-ref file-details 'last-updater #f)
+                                            (hashtable-ref file-details 'last-updated-date #f)
+                                            (hashtable-ref file-details 'last-updated-relative-date #f)
+                                            (hashtable-ref file-details 'assigned '())
+                                            ;; "closed" is a special keyword to indicate
+                                            ;; the open/closed status of an issue.
+                                            (delete "closed" all-keywords)
+                                            (not (member "closed" all-keywords))
+                                            (hashtable-ref file-details 'tasks 0)
+                                            (hashtable-ref file-details 'completed-tasks 0)
+                                            (hashtable-ref file-details 'posts #f))))))
+               rcons get-line port))
+            "git" "ls-files")
+           (lambda (issue1 issue2)
+             (< (issue-created-date issue1)
+                (issue-created-date issue2)))))))
