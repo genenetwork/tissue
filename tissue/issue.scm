@@ -1,5 +1,6 @@
 ;;; tissue --- Text based issue tracker
 ;;; Copyright © 2022 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2022 Frederick Muriuki Muriithi <fredmanglis@gmail.com>
 ;;;
 ;;; This file is part of tissue.
 ;;;
@@ -83,63 +84,66 @@ strings, and return them as a list."
 (define (file-details file)
   "Return a hashtable of details extracted from gemini FILE."
   (let ((result (make-eq-hashtable)))
-    (call-with-input-file file
-      (lambda (port)
-        (port-transduce (tmap (lambda (line)
-                                (cond
-                                 ;; Lists with the assigned: prefix
-                                 ;; specify assignees.
-                                 ((string-prefix? "* assigned:" line)
-                                  (hashtable-append! result 'assigned
-                                                     (comma-split
-                                                      (remove-prefix "* assigned:" line))))
-                                 ;; Lists with the keywords: prefix
-                                 ;; specify keywords.
-                                 ((string-prefix? "* keywords:" line)
-                                  (hashtable-append! result 'keywords
-                                                     (comma-split
-                                                      (remove-prefix "* keywords:" line))))
-                                 ;; A more fuzzy heuristic to find keywords
-                                 ((and (string-prefix? "* " line)
-                                       ;; Is every comma-separated
-                                       ;; element two words utmost?
-                                       (every (lambda (element)
-                                                (<= (length
-                                                     (string-split element #\space))
-                                                    2))
-                                              (comma-split (remove-prefix "* " line)))
-                                       ;; Does any comma-separated
-                                       ;; element contain a potential
-                                       ;; keyword?
-                                       (any (lambda (element)
-                                              (any (lambda (keyword)
-                                                     (string-contains element keyword))
-                                                   (list "request" "bug" "critical"
-                                                         "enhancement" "progress"
-                                                         "testing" "later" "documentation"
-                                                         "help" "closed")))
-                                            (comma-split (remove-prefix "* " line))))
-                                  (hashtable-append! result 'keywords
-                                                     (comma-split
-                                                      (remove-prefix "* " line))))
-                                 ;; Checkbox lists are tasks. If the
-                                 ;; checkbox has any character other
-                                 ;; than space in it, the task is
-                                 ;; completed.
-                                 ((string-match "\\* \\[(.)\\]" line)
-                                  => (lambda (m)
-                                       (hashtable-update! result 'tasks 1+ 0)
-                                       (unless (string=? (match:substring m 1) " ")
-                                         (hashtable-update! result 'completed-tasks 1+ 0))))
-                                 ;; The first level one heading is the
-                                 ;; title.
-                                 ((string-prefix? "# " line)
-                                  (unless (hashtable-contains? result 'title)
-                                    (hashtable-set! result 'title
-                                                    (remove-prefix "# " line)))))))
-                        (const #t)
-                        get-line-dos-or-unix
-                        port)))
+    ;; Files may be renamed or deleted, but not committed. Therefore,
+    ;; only read the file if it exists.
+    (when (file-exists? file)
+      (call-with-input-file file
+	(lambda (port)
+          (port-transduce (tmap (lambda (line)
+                                  (cond
+                                   ;; Lists with the assigned: prefix
+                                   ;; specify assignees.
+                                   ((string-prefix? "* assigned:" line)
+                                    (hashtable-append! result 'assigned
+						       (comma-split
+							(remove-prefix "* assigned:" line))))
+                                   ;; Lists with the keywords: prefix
+                                   ;; specify keywords.
+                                   ((string-prefix? "* keywords:" line)
+                                    (hashtable-append! result 'keywords
+						       (comma-split
+							(remove-prefix "* keywords:" line))))
+                                   ;; A more fuzzy heuristic to find keywords
+                                   ((and (string-prefix? "* " line)
+					 ;; Is every comma-separated
+					 ;; element two words utmost?
+					 (every (lambda (element)
+                                                  (<= (length
+						       (string-split element #\space))
+						      2))
+						(comma-split (remove-prefix "* " line)))
+					 ;; Does any comma-separated
+					 ;; element contain a potential
+					 ;; keyword?
+					 (any (lambda (element)
+						(any (lambda (keyword)
+						       (string-contains element keyword))
+						     (list "request" "bug" "critical"
+                                                           "enhancement" "progress"
+                                                           "testing" "later" "documentation"
+                                                           "help" "closed")))
+					      (comma-split (remove-prefix "* " line))))
+                                    (hashtable-append! result 'keywords
+						       (comma-split
+							(remove-prefix "* " line))))
+                                   ;; Checkbox lists are tasks. If the
+                                   ;; checkbox has any character other
+                                   ;; than space in it, the task is
+                                   ;; completed.
+                                   ((string-match "\\* \\[(.)\\]" line)
+                                    => (lambda (m)
+					 (hashtable-update! result 'tasks 1+ 0)
+					 (unless (string=? (match:substring m 1) " ")
+                                           (hashtable-update! result 'completed-tasks 1+ 0))))
+                                   ;; The first level one heading is the
+                                   ;; title.
+                                   ((string-prefix? "# " line)
+                                    (unless (hashtable-contains? result 'title)
+				      (hashtable-set! result 'title
+						      (remove-prefix "# " line)))))))
+                          (const #t)
+                          get-line-dos-or-unix
+                          port))))
     (call-with-input-pipe
      (lambda (port)
        (hashtable-set!
