@@ -20,6 +20,7 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (import (rnrs conditions)
+        (rnrs exceptions)
         (rnrs io ports)
         (srfi srfi-1)
         (srfi srfi-26)
@@ -368,17 +369,21 @@ To get usage information for one of these sub-commands, run
     ((_ (or "-h" "--help"))
      (print-usage))
     ((_ command args ...)
-     (apply (match command
-              ("news" tissue-news)
-              ("list" tissue-list)
-              ("edit" tissue-edit)
-              ("show" tissue-show)
-              (invalid-command
-               (format (current-error-port) "Invalid command `~a'~%~%"
-                       invalid-command)
-               (print-usage)
-               (exit #f)))
-            args))
+     (guard (c ((message-condition? c)
+                (display (condition-message c) (current-error-port))
+                (newline (current-error-port))
+                (exit #f)))
+       (apply (match command
+                ("news" tissue-news)
+                ("list" tissue-list)
+                ("edit" tissue-edit)
+                ("show" tissue-show)
+                (invalid-command
+                 (format (current-error-port) "Invalid command `~a'~%~%"
+                         invalid-command)
+                 (print-usage)
+                 (exit #f)))
+              args)))
     ;; tissue is an alias for `tissue list'
     ((_)
      (tissue-list))))
