@@ -16,17 +16,36 @@
 # You should have received a copy of the GNU General Public License
 # along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
+project = tissue
+# FIXME: Do not hardcode the effective version.
+guile_effective_version = 3.0
+
+GUILD ?= guild
+
 prefix ?= /usr/local
 exec_prefix ?= $(prefix)
 bindir ?= $(exec_prefix)/bin
+libdir ?= $(exec_prefix)/lib
+datarootdir ?= $(prefix)/share
 
+top_level_module_dir = $(project)
+sources = $(wildcard $(top_level_module_dir)/*.scm)
+objects = $(sources:.scm=.go)
 scripts = $(wildcard bin/*)
+
+scmdir = $(datarootdir)/guile/site/$(guile_effective_version)/$(top_level_module_dir)
+godir = $(libdir)/guile/$(guile_effective_version)/site-ccache/$(top_level_module_dir)
 
 .PHONY: all check install
 
-all: ;
+all: $(objects)
+
+%.go: %.scm
+	$(GUILD) compile -L . -o $@ $<
 
 check: ;
 
 install: $(scripts)
 	install -D $^ --target-directory $(bindir)
+	install -D $(sources) --target-directory $(scmdir)
+	install -D $(objects) --target-directory $(godir)
