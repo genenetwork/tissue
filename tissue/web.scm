@@ -97,6 +97,14 @@ NEW-EXTENSION."
                                  #:posts)))
        (body (the-body opts))))
 
+(define (sanitize-string str)
+  "Downcase STR and replace spaces with hyphens."
+  (string-map (lambda (c)
+                (case c
+                  ((#\space) #\-)
+                  (else c)))
+              (string-downcase str)))
+
 (define (issue-list-item-markup-writer-action markup engine)
   (sxml->xml
    `(li (@ (class "issue-list-item"))
@@ -106,7 +114,8 @@ NEW-EXTENSION."
            ,(markup-option markup #:title))
         ,@(map (lambda (tag)
                  (let ((words (string-split tag (char-set #\- #\space))))
-                   `(a (@ (href ,(string-append (%tags-path) "/" tag ".html"))
+                   `(a (@ (href ,(string-append (%tags-path) "/"
+                                                (sanitize-string tag) ".html"))
                           (class ,(string-append "tag"
                                                  (if (not (null? (lset-intersection
                                                                   string=? words
@@ -209,7 +218,8 @@ issue listings are not generated."
     (when tags-path
       (for-each (lambda (tag)
                   (let ((output-file (string-append output-directory
-                                                    tags-path "/" tag ".html")))
+                                                    tags-path "/"
+                                                    (sanitize-string tag) ".html")))
                     (display (format "tag: ~a -> ~a~%" tag output-file))
                     (build-issue-listing (reverse (filter (lambda (issue)
                                                             (member tag (issue-keywords issue)))
