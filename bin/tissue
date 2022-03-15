@@ -286,8 +286,8 @@ export EDITOR=emacsclient"))
        ;; committed. Therefore, only read the file if it exists.
        (if (file-exists? issue-file)
            (invoke (getenv "EDITOR") issue-file)
-           (raise-exception (make-message-condition
-                             (string-append "No such file or directory: " issue-file))))))))
+           (raise (make-message-condition
+                   (string-append "No such file or directory: " issue-file))))))))
 
 (define tissue-show
   (match-lambda*
@@ -344,8 +344,8 @@ Show the text of issue #ISSUE-NUMBER.
                 (const #t)
                 get-line-dos-or-unix
                 port)))
-           (raise-exception (make-message-condition
-                             (string-append "No such file or directory: " issue-file))))))))
+           (raise (make-message-condition
+                   (string-append "No such file or directory: " issue-file))))))))
 
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
