@@ -205,14 +205,20 @@ per-tag issue listings are not generated."
                           (string-suffix? ".skb" input-file))
                       (with-output-to-file output-file
                         (cut evaluate-document
-                             (call-with-input-file input-file
-                               (cut evaluate-ast-from-port <>
-                                    #:reader ((reader:make (lookup-reader
-                                                            (cond
-                                                             ((string-suffix? ".gmi" input-file)
-                                                              'gemtext)
-                                                             ((string-suffix? ".skb" input-file)
-                                                              'skribe)))))))
+                             ;; Files may be renamed or deleted, but
+                             ;; not committed. Therefore, raise an
+                             ;; exception if the file does not exist.
+                             (if (file-exists? input-file)
+                                 (call-with-input-file input-file
+                                   (cut evaluate-ast-from-port <>
+                                        #:reader ((reader:make (lookup-reader
+                                                                (cond
+                                                                 ((string-suffix? ".gmi" input-file)
+                                                                  'gemtext)
+                                                                 ((string-suffix? ".skb" input-file)
+                                                                  'skribe)))))))
+                                 (raise (make-message-condition
+                                         (string-append "No such file or directory: " input-file))))
                              (find-engine 'html)))
                       (copy-file input-file output-file))))))
       rcons get-line port))
