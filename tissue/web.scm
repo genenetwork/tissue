@@ -179,13 +179,20 @@ default, all issues are listed newest first."
          (find-engine 'html))))
 
 ;; TODO: Use guile-filesystem.
-(define* (build-website output-directory #:key title (tags-path "/tags"))
+(define* (build-website output-directory #:key title css (tags-path "/tags"))
   "Export current git repository to OUTPUT-DIRECTORY as a website.
 
 TITLE is the title to use head of the generated HTML, among other
-places. TAGS-PATH is the path relative to the document root where the
-per-tag issue listings are put. It must begin with a /. If it is #f,
-per-tag issue listings are not generated."
+places.
+
+CSS is the path to a CSS stylesheet. If it is #f, no stylesheet is
+included in the generated web pages.
+
+TAGS-PATH is the path relative to the document root where the per-tag
+issue listings are put. It must begin with a /. If it is #f, per-tag
+issue listings are not generated."
+  (when css
+    (engine-custom-set! (find-engine 'html) 'css css))
   (mkdir-p output-directory)
   ;; Export auto-generated files. We must do this before exporting
   ;; user-created files to allow users to be able to override
