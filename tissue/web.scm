@@ -187,7 +187,7 @@ places. TAGS-PATH is the path relative to the document root where the
 per-tag issue listings are put. It must begin with a /. If it is #f,
 per-tag issue listings are not generated."
   (mkdir-p output-directory)
-  ;; Publish files.
+  ;; Export files.
   (call-with-input-pipe
    (lambda (port)
      (port-transduce
@@ -224,12 +224,12 @@ per-tag issue listings are not generated."
       rcons get-line port))
    "git" "ls-files")
   (parameterize ((%tags-path tags-path))
-    ;; Publish index.
+    ;; Export index.
     (let ((output-file (string-append output-directory "/index.html")))
       (display (format "~a~%" output-file))
       (build-issue-listing (reverse (issues)) output-file
                            #:title title))
-    ;; Publish per-tag listings.
+    ;; Export per-tag listings.
     (when tags-path
       (for-each (lambda (tag)
                   (let ((output-file (string-append output-directory
