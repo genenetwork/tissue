@@ -187,7 +187,28 @@ places. TAGS-PATH is the path relative to the document root where the
 per-tag issue listings are put. It must begin with a /. If it is #f,
 per-tag issue listings are not generated."
   (mkdir-p output-directory)
-  ;; Export files.
+  ;; Export auto-generated files. We must do this before exporting
+  ;; user-created files to allow users to be able to override
+  ;; auto-generated files.
+  (parameterize ((%tags-path tags-path))
+    ;; Export home page listing all issues.
+    (let ((output-file (string-append output-directory "/index.html")))
+      (display (format "~a~%" output-file))
+      (build-issue-listing (reverse (issues)) output-file
+                           #:title title))
+    ;; Export per-tag listings.
+    (when tags-path
+      (for-each (lambda (tag)
+                  (let ((output-file (string-append output-directory
+                                                    tags-path "/" tag ".html")))
+                    (display (format "tag: ~a -> ~a~%" tag output-file))
+                    (build-issue-listing (reverse (filter (lambda (issue)
+                                                            (member tag (issue-keywords issue)))
+                                                          (issues)))
+                                         output-file
+                                         #:title title)))
+                (delete-duplicates (append-map issue-keywords (issues))))))
+  ;; Export user-created files.
   (call-with-input-pipe
    (lambda (port)
      (port-transduce
@@ -222,22 +243,4 @@ per-tag issue listings are not generated."
                              (find-engine 'html)))
                       (copy-file input-file output-file))))))
       rcons get-line port))
-   "git" "ls-files")
-  (parameterize ((%tags-path tags-path))
-    ;; Export index.
-    (let ((output-file (string-append output-directory "/index.html")))
-      (display (format "~a~%" output-file))
-      (build-issue-listing (reverse (issues)) output-file
-                           #:title title))
-    ;; Export per-tag listings.
-    (when tags-path
-      (for-each (lambda (tag)
-                  (let ((output-file (string-append output-directory
-                                                    tags-path "/" tag ".html")))
-                    (display (format "tag: ~a -> ~a~%" tag output-file))
-                    (build-issue-listing (reverse (filter (lambda (issue)
-                                                            (member tag (issue-keywords issue)))
-                                                          (issues)))
-                                         output-file
-                                         #:title title)))
-                (delete-duplicates (append-map issue-keywords (issues)))))))
+   "git" "ls-files"))
