@@ -31,7 +31,9 @@
         (ice-9 regex)
         (tissue conditions)
         (tissue issue)
-        (tissue utils))
+        (tissue tissue)
+        (tissue utils)
+        (tissue web))
 
 (define (invoke program . args)
   (unless (zero? (apply system* program args))
@@ -345,6 +347,24 @@ Show the text of issue #ISSUE-NUMBER.
                 port)))
            (raise (issue-file-not-found-error issue-file)))))))
 
+(define tissue-web
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a web OUTPUT-DIRECTORY
+Export the repository as a website to OUTPUT-DIRECTORY.
+
+"
+             (command-line-program)))
+    ((output-directory)
+     (let ((config (load (string-append (call-with-input-pipe
+                                         get-line
+                                         "git" "rev-parse" "--show-toplevel")
+                                        "/tissue.scm"))))
+       (build-website output-directory
+                      #:title (tissue-configuration-project config)
+                      #:css (tissue-configuration-web-css config)
+                      #:tags-path (tissue-configuration-web-tags-path config))))))
+
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
 
@@ -354,6 +374,7 @@ COMMAND must be one of the sub-commands listed below:
   edit      edit an issue
   show      show the text of an issue
   news      list recent updates
+  web       export repository as website
 
 To get usage information for one of these sub-commands, run
   ~a COMMAND --help
@@ -378,6 +399,7 @@ To get usage information for one of these sub-commands, run
                 ("list" tissue-list)
                 ("edit" tissue-edit)
                 ("show" tissue-show)
+                ("web" tissue-web)
                 (invalid-command
                  (format (current-error-port) "Invalid command `~a'~%~%"
                          invalid-command)
