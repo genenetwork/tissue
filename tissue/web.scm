@@ -17,6 +17,7 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (define-module (tissue web)
+  #:use-module (rnrs exceptions)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
@@ -31,6 +32,7 @@
   #:use-module (skribilo utils keywords)
   #:use-module (skribilo writer)
   #:use-module (sxml simple)
+  #:use-module (tissue conditions)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
   #:export (issue-listing
@@ -245,8 +247,7 @@ issue listings are not generated."
                                                                   'gemtext)
                                                                  ((string-suffix? ".skb" input-file)
                                                                   'skribe)))))))
-                                 (raise (make-message-condition
-                                         (string-append "No such file or directory: " input-file))))
+                                 (raise (issue-file-not-found-error input-file)))
                              (find-engine 'html)))
                       (copy-file input-file output-file))))))
       rcons get-line port))

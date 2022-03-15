@@ -19,8 +19,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
-(import (rnrs conditions)
-        (rnrs exceptions)
+(import (rnrs exceptions)
         (rnrs io ports)
         (srfi srfi-1)
         (srfi srfi-26)
@@ -30,6 +29,7 @@
         (ice-9 match)
         (ice-9 popen)
         (ice-9 regex)
+        (tissue conditions)
         (tissue issue)
         (tissue utils))
 
@@ -286,8 +286,7 @@ export EDITOR=emacsclient"))
        ;; committed. Therefore, only read the file if it exists.
        (if (file-exists? issue-file)
            (invoke (getenv "EDITOR") issue-file)
-           (raise (make-message-condition
-                   (string-append "No such file or directory: " issue-file))))))))
+           (raise (issue-file-not-found-error issue-file)))))))
 
 (define tissue-show
   (match-lambda*
@@ -344,8 +343,7 @@ Show the text of issue #ISSUE-NUMBER.
                 (const #t)
                 get-line-dos-or-unix
                 port)))
-           (raise (make-message-condition
-                   (string-append "No such file or directory: " issue-file))))))))
+           (raise (issue-file-not-found-error issue-file)))))))
 
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
@@ -369,8 +367,10 @@ To get usage information for one of these sub-commands, run
     ((_ (or "-h" "--help"))
      (print-usage))
     ((_ command args ...)
-     (guard (c ((message-condition? c)
-                (display (condition-message c) (current-error-port))
+     (guard (c ((issue-file-not-found-error? c)
+                (display (string-append "No such file or directory: "
+                                        (issue-file-not-found-error-issue-file c))
+                         (current-error-port))
                 (newline (current-error-port))
                 (exit #f)))
        (apply (match command
