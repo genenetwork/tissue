@@ -66,10 +66,14 @@
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
-HASHTABLE. If KEY is not associated to any value in HASHTABLE, assume
-it is associated to the empty list."
-  (hashtable-update!
-   hashtable key (cut append <> new-values) '()))
+HASHTABLE. Deduplicate the resulting list if necessary. If KEY is not
+associated to any value in HASHTABLE, assume it is associated to the
+empty list."
+  (hashtable-update! hashtable
+                     key
+                     (lambda (old-values)
+                       (delete-duplicates (append old-values new-values)))
+                     '()))
 
 (define (comma-split str)
   "Split string at commas, trim whitespace from both ends of the split
