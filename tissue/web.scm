@@ -117,7 +117,7 @@ NEW-EXTENSION."
                             #\/)))))
            ,(markup-option markup #:title))
         ,@(map (lambda (tag)
-                 (let ((words (string-split tag (char-set #\- #\s pace))))
+                 (let ((words (string-split tag (char-set #\- #\space))))
                    `(a (@ (href ,(string-append (%tags-path) "/"
                                                 (uri-encode (sanitize-string tag))
                                                 ".html"))
