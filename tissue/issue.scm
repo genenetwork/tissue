@@ -130,7 +130,7 @@ strings, and return them as a list."
                                    ;; checkbox has any character other
                                    ;; than space in it, the task is
                                    ;; completed.
-                                   ((string-match "\\* \\[(.)\\]" line)
+                                   ((string-match "^\\* \\[(.)\\]" line)
                                     => (lambda (m)
 					 (hashtable-update! result 'tasks 1+ 0)
 					 (unless (string=? (match:substring m 1) " ")
