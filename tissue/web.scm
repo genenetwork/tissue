@@ -122,6 +122,7 @@ NEW-EXTENSION."
                                                 (uri-encode (sanitize-string tag))
                                                 ".html"))
                           (class ,(string-append "tag"
+                                                 (string-append " tag-" (sanitize-string tag))
                                                  (if (not (null? (lset-intersection
                                                                   string=? words
                                                                   (list "bug" "critical"))))
