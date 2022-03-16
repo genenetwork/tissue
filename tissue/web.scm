@@ -32,6 +32,7 @@
   #:use-module (skribilo utils keywords)
   #:use-module (skribilo writer)
   #:use-module (sxml simple)
+  #:use-module (web uri)
   #:use-module (tissue conditions)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
@@ -108,14 +109,18 @@ NEW-EXTENSION."
 (define (issue-list-item-markup-writer-action markup engine)
   (sxml->xml
    `(li (@ (class "issue-list-item"))
-        (a (@ (href ,(replace-extension
-                      (string-append "/" (markup-option markup #:file))
-                      "html")))
+        (a (@ (href ,(string-append
+                      "/" (encode-and-join-uri-path
+                           (string-split
+                            (replace-extension (markup-option markup #:file)
+                                               "html")
+                            #\/)))))
            ,(markup-option markup #:title))
         ,@(map (lambda (tag)
-                 (let ((words (string-split tag (char-set #\- #\space))))
+                 (let ((words (string-split tag (char-set #\- #\s pace))))
                    `(a (@ (href ,(string-append (%tags-path) "/"
-                                                (sanitize-string tag) ".html"))
+                                                (uri-encode (sanitize-string tag))
+                                                ".html"))
                           (class ,(string-append "tag"
                                                  (if (not (null? (lset-intersection
                                                                   string=? words
