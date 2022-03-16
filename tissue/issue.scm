@@ -85,6 +85,33 @@ strings, and return them as a list."
   "Remove PREFIX from STR."
   (substring str (string-length prefix)))
 
+(define (<=n-words? str n)
+  "Return #t if STR has N words or less. Else, return #f."
+  (<= (length (string-split str #\space))
+      n))
+
+(define (list-line->alist line)
+  "Split list LINE such as \"assigned: foo, keywords: fubar, bar\"
+into an association list of key-value pairs. Keys are symbols. Values
+are lists of strings. If LINE does not contain such key-value pairs,
+return #f."
+  (and (string-match "^\\* [a-zA-Z]+:" line)
+       (fold (lambda (element result)
+               (cond
+                ((string-match "^([a-zA-Z]+):[ ]*(.*)" element)
+                 => (lambda (m)
+                      (cons (list (string->symbol
+                                   (string-downcase (match:substring m 1)))
+                                  (match:substring m 2))
+                            result)))
+                (else
+                 (match result
+                   (((key . values) tail ...)
+                    (cons (cons key (cons element values))
+                          tail))))))
+             '()
+             (comma-split (remove-prefix "* " line)))))
+
 (define (file-details file)
   "Return a hashtable of details extracted from gemini FILE."
   (let ((result (make-eq-hashtable)))
@@ -95,26 +122,40 @@ strings, and return them as a list."
 	(lambda (port)
           (port-transduce (tmap (lambda (line)
                                   (cond
-                                   ;; Lists with the assigned: prefix
-                                   ;; specify assignees.
-                                   ((string-prefix? "* assigned:" line)
-                                    (hashtable-append! result 'assigned
-						       (comma-split
-							(remove-prefix "* assigned:" line))))
-                                   ;; Lists with the keywords: prefix
-                                   ;; specify keywords.
-                                   ((string-prefix? "* keywords:" line)
-                                    (hashtable-append! result 'keywords
-						       (comma-split
-							(remove-prefix "* keywords:" line))))
+                                   ;; Checkbox lists are tasks. If the
+                                   ;; checkbox has any character other
+                                   ;; than space in it, the task is
+                                   ;; completed.
+                                   ((string-match "^\\* \\[(.)\\]" line)
+                                    => (lambda (m)
+					 (hashtable-update! result 'tasks 1+ 0)
+					 (unless (string=? (match:substring m 1) " ")
+                                           (hashtable-update! result 'completed-tasks 1+ 0))))
+                                   ((let ((alist (list-line->alist line)))
+                                      (and alist
+                                           ;; Every value string is 2
+                                           ;; words or less.
+                                           (every (match-lambda
+                                                    ((_ . values)
+                                                     (every (cut <=n-words? <> 2)
+                                                            values)))
+                                                  alist)
+                                           alist))
+                                    => (lambda (alist)
+                                         ;; Insert values based on
+                                         ;; their keys.
+                                         (for-each (match-lambda
+                                                     (((or 'assign 'assigned) . values)
+                                                      (hashtable-append! result 'assigned values))
+                                                     (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
+                                                      (hashtable-append! result 'keywords values))
+                                                     (_ #t))
+                                                   alist)))
                                    ;; A more fuzzy heuristic to find keywords
                                    ((and (string-prefix? "* " line)
 					 ;; Is every comma-separated
 					 ;; element two words utmost?
-					 (every (lambda (element)
-                                                  (<= (length
-						       (string-split element #\space))
-						      2))
+					 (every (cut <=n-words? <> 2)
 						(comma-split (remove-prefix "* " line)))
 					 ;; Does any comma-separated
 					 ;; element contain a potential
@@ -130,15 +171,6 @@ strings, and return them as a list."
                                     (hashtable-append! result 'keywords
 						       (comma-split
 							(remove-prefix "* " line))))
-                                   ;; Checkbox lists are tasks. If the
-                                   ;; checkbox has any character other
-                                   ;; than space in it, the task is
-                                   ;; completed.
-                                   ((string-match "^\\* \\[(.)\\]" line)
-                                    => (lambda (m)
-					 (hashtable-update! result 'tasks 1+ 0)
-					 (unless (string=? (match:substring m 1) " ")
-                                           (hashtable-update! result 'completed-tasks 1+ 0))))
                                    ;; The first level one heading is the
                                    ;; title.
                                    ((string-prefix? "# " line)
