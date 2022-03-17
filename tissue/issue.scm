@@ -72,8 +72,7 @@ associated to any value in HASHTABLE, assume it is associated to the
 empty list."
   (hashtable-update! hashtable
                      key
-                     (lambda (old-values)
-                       (delete-duplicates (append old-values new-values)))
+                     (cut apply lset-adjoin equal? <> new-values)
                      '()))
 
 (define (comma-split str)
