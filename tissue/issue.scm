@@ -193,20 +193,17 @@ return #f."
          (compose (tenumerate)
                   (tmap (match-lambda
                           ((index . line)
-                           (let ((alist (call-with-input-string line read)))
+                           (let* ((alist (call-with-input-string line read))
+                                  (author (assq-ref alist 'author))
+                                  (date (assq-ref alist 'author-date))
+                                  (relative-date (assq-ref alist 'author-relative-date)))
                              (when (zero? index)
-                               (hashtable-set! result 'last-updater
-                                               (assq-ref alist 'author))
-                               (hashtable-set! result 'last-updated-date
-                                               (unix-time->date (assq-ref alist 'author-date)))
-                               (hashtable-set! result 'last-updated-relative-date
-                                               (assq-ref alist 'author-relative-date)))
-                             (hashtable-set! result 'creator
-                                             (assq-ref alist 'author))
-                             (hashtable-set! result 'created-date
-                                             (unix-time->date (assq-ref alist 'author-date)))
-                             (hashtable-set! result 'created-relative-date
-                                             (assq-ref alist 'author-relative-date)))))))
+                               (hashtable-set! result 'last-updater author)
+                               (hashtable-set! result 'last-updated-date (unix-time->date date))
+                               (hashtable-set! result 'last-updated-relative-date relative-date))
+                             (hashtable-set! result 'creator author)
+                             (hashtable-set! result 'created-date (unix-time->date date))
+                             (hashtable-set! result 'created-relative-date relative-date))))))
          rcount get-line port)))
      "git" "log" "--follow"
      (string-append "--format=format:("
