@@ -240,7 +240,10 @@ return #f."
                                    (not (string=? (basename file) "README.gmi"))
                                    (not (string-prefix? "." (basename file)))
                                    (let* ((file-details (file-details file))
-                                          (all-keywords (hashtable-ref file-details 'keywords '())))
+                                          ;; Downcase keywords to make
+                                          ;; them case-insensitive.
+                                          (all-keywords (map string-downcase
+                                                             (hashtable-ref file-details 'keywords '()))))
                                      (issue file
                                             ;; Fallback to filename if title has no alphabetic
                                             ;; characters.
