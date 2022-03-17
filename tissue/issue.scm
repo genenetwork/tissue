@@ -208,7 +208,7 @@ return #f."
                              (hashtable-set! result 'created-relative-date
                                              (assq-ref alist 'author-relative-date)))))))
          rcount get-line port)))
-     "git" "log"
+     "git" "log" "--follow"
      (string-append "--format=format:("
                     "(author . \"%an\")"
                     "(author-date . %at)"
