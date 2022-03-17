@@ -155,7 +155,12 @@ NEW-EXTENSION."
                     (format ", last updated ~a by ~a"
                             (markup-option markup #:last-updated-relative-date)
                             (markup-option markup #:last-updater))
-                    ""))))))
+                    "")
+                (if (zero? (markup-option markup #:tasks))
+                    ""
+                    (format "; ~a of ~a tasks done"
+                            (markup-option markup #:completed-tasks)
+                            (markup-option markup #:tasks))))))))
 
 (markup-writer 'issue-list-item
                (find-engine 'html)
