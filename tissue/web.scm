@@ -180,7 +180,7 @@ default, all issues are listed newest first."
                                    #:last-updated-relative-date (issue-last-updated-relative-date issue)
                                    #:assigned (issue-assigned issue)
                                    #:keywords (issue-keywords issue)
-                                   #:open (issue-open issue)
+                                   #:open (issue-open? issue)
                                    #:tasks (issue-tasks issue)
                                    #:completed-tasks (issue-completed-tasks issue)
                                    #:posts (issue-posts issue)))

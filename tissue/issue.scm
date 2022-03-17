@@ -39,7 +39,7 @@
             issue-last-updated-relative-date
             issue-assigned
             issue-keywords
-            issue-open
+            issue-open?
             issue-tasks
             issue-completed-tasks
             issue-posts
@@ -60,7 +60,7 @@
   (last-updated-relative-date issue-last-updated-relative-date)
   (assigned issue-assigned)
   (keywords issue-keywords)
-  (open issue-open)
+  (open issue-open?)
   (tasks issue-tasks)
   (completed-tasks issue-completed-tasks)
   (posts issue-posts))
