@@ -22,6 +22,7 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
@@ -112,6 +113,11 @@ return #f."
              '()
              (comma-split (remove-prefix "* " line)))))
 
+(define (unix-time->date timestamp)
+  "Convert unix TIMESTAMP to an SRFI-19 date object."
+  (time-monotonic->date
+   (make-time time-monotonic 0 timestamp)))
+
 (define (file-details file)
   "Return a hashtable of details extracted from gemini FILE."
   (let ((result (make-eq-hashtable)))
@@ -193,13 +199,13 @@ return #f."
                                (hashtable-set! result 'last-updater
                                                (assq-ref alist 'author))
                                (hashtable-set! result 'last-updated-date
-                                               (assq-ref alist 'author-date))
+                                               (unix-time->date (assq-ref alist 'author-date)))
                                (hashtable-set! result 'last-updated-relative-date
                                                (assq-ref alist 'author-relative-date)))
                              (hashtable-set! result 'creator
                                              (assq-ref alist 'author))
                              (hashtable-set! result 'created-date
-                                             (assq-ref alist 'author-date))
+                                             (unix-time->date (assq-ref alist 'author-date)))
                              (hashtable-set! result 'created-relative-date
                                              (assq-ref alist 'author-relative-date)))))))
          rcount get-line port)))
@@ -258,5 +264,5 @@ return #f."
                rcons get-line port))
             "git" "ls-files")
            (lambda (issue1 issue2)
-             (< (issue-created-date issue1)
-                (issue-created-date issue2)))))))
+             (time<? (date->time-monotonic (issue-created-date issue1))
+                     (date->time-monotonic (issue-created-date issue2))))))))
