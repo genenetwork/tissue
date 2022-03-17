@@ -43,6 +43,10 @@
             issue-tasks
             issue-completed-tasks
             issue-posts
+            post
+            post-author
+            post-date
+            post-relative-date
             issues))
 
 (define-record-type <issue>
@@ -64,6 +68,13 @@
   (tasks issue-tasks)
   (completed-tasks issue-completed-tasks)
   (posts issue-posts))
+
+(define-record-type <post>
+  (post author date relative-date)
+  post?
+  (author post-author)
+  (date post-date)
+  (relative-date post-relative-date))
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
@@ -203,8 +214,9 @@ return #f."
                                (hashtable-set! result 'last-updated-relative-date relative-date))
                              (hashtable-set! result 'creator author)
                              (hashtable-set! result 'created-date (unix-time->date date))
-                             (hashtable-set! result 'created-relative-date relative-date))))))
-         rcount get-line port)))
+                             (hashtable-set! result 'created-relative-date relative-date)
+                             (post author date relative-date))))))
+         rcons get-line port)))
      "git" "log" "--follow"
      (string-append "--format=format:("
                     "(author . \"%an\")"

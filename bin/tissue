@@ -150,81 +150,83 @@ List recent updates.
 
 (define (print-issue issue-number issue)
   "Print ISSUE with number ISSUE-NUMBER."
-  (display (magenta (issue-title issue)))
-  ;; Highlight keywords containing "bug" or "critical" as whole words
-  ;; in red. Else, highlight in blue.
-  (unless (null? (issue-keywords issue))
-    (display " ")
-    (display (string-join
-              (map (lambda (keyword)
-                     ((cond
-                       ((not (null? (lset-intersection
-                                     string=?
-                                     (string-split keyword #\space)
-                                     (list "bug" "critical"))))
-                        red-background)
-                       (else blue-background))
-                      (string-append " " keyword " ")))
-                   (issue-keywords issue))
-              " ")))
-  (unless (null? (issue-assigned issue))
-    (display (green (string-append " (assigned: "
-                                   (string-join (issue-assigned issue)
-                                                ", ")
-                                   ")"))))
-  (when (> (issue-posts issue) 1)
-    (display (string-append " ["
-                            (number->string (issue-posts issue))
-                            " posts]")))
-  (newline)
-  (display (string-append
-            (cyan (string-append "#" (number->string issue-number)))
-            " opened "
-            (cyan (issue-created-relative-date issue))
-            " by "
-            (cyan (issue-creator issue))))
-  (when (> (issue-posts issue) 1)
-    (display (string-append (cyan ",")
-                            " last updated "
-                            (cyan (issue-last-updated-relative-date issue))
-                            " by "
-                            (cyan (issue-last-updater issue)))))
-  (unless (zero? (issue-tasks issue))
-    (display (string-append (cyan "; ")
-                            (number->string (issue-completed-tasks issue))
-                            "/"
-                            (number->string (issue-tasks issue))
-                            " tasks done")))
-  (newline))
+  (let ((number-of-posts (length (issue-posts issue))))
+    (display (magenta (issue-title issue)))
+    ;; Highlight keywords containing "bug" or "critical" as whole
+    ;; words in red. Else, highlight in blue.
+    (unless (null? (issue-keywords issue))
+      (display " ")
+      (display (string-join
+                (map (lambda (keyword)
+                       ((cond
+                         ((not (null? (lset-intersection
+                                       string=?
+                                       (string-split keyword #\space)
+                                       (list "bug" "critical"))))
+                          red-background)
+                         (else blue-background))
+                        (string-append " " keyword " ")))
+                     (issue-keywords issue))
+                " ")))
+    (unless (null? (issue-assigned issue))
+      (display (green (string-append " (assigned: "
+                                     (string-join (issue-assigned issue)
+                                                  ", ")
+                                     ")"))))
+    (when (> number-of-posts 1)
+      (display (string-append " ["
+                              (number->string number-of-posts)
+                              " posts]")))
+    (newline)
+    (display (string-append
+              (cyan (string-append "#" (number->string issue-number)))
+              " opened "
+              (cyan (issue-created-relative-date issue))
+              " by "
+              (cyan (issue-creator issue))))
+    (when (> number-of-posts 1)
+      (display (string-append (cyan ",")
+                              " last updated "
+                              (cyan (issue-last-updated-relative-date issue))
+                              " by "
+                              (cyan (issue-last-updater issue)))))
+    (unless (zero? (issue-tasks issue))
+      (display (string-append (cyan "; ")
+                              (number->string (issue-completed-tasks issue))
+                              "/"
+                              (number->string (issue-tasks issue))
+                              " tasks done")))
+    (newline)))
 
 (define (print-issue-to-gemtext issue-number issue)
   "Print ISSUE with number ISSUE-NUMBER to gemtext."
-  (format #t "# ~a" (issue-title issue))
-  (unless (null? (issue-keywords issue))
-    (format #t " [~a]"
-            (string-join (issue-keywords issue)
-                         ", ")))
-  (unless (null? (issue-assigned issue))
-    (format #t " (assigned: ~a)"
-            (string-join (issue-assigned issue)
-                         ", ")))
-  (when (> (issue-posts issue) 1)
-    (format #t " [~a posts]" (issue-posts issue)))
-  (newline)
-  (format #t "~a opened ~a by ~a"
-          issue-number
-          (issue-created-relative-date issue)
-          (issue-creator issue))
-  (when (> (issue-posts issue) 1)
-    (format #t ", last updated ~a by ~a"
-            (issue-last-updated-relative-date issue)
-            (issue-last-updater issue)))
-  (unless (zero? (issue-tasks issue))
-    (format #t "; ~a/~a tasks done"
-            (issue-completed-tasks issue)
-            (issue-tasks issue)))
-  (newline)
-  (newline))
+  (let ((number-of-posts (length (issue-posts issue))))
+    (format #t "# ~a" (issue-title issue))
+    (unless (null? (issue-keywords issue))
+      (format #t " [~a]"
+              (string-join (issue-keywords issue)
+                           ", ")))
+    (unless (null? (issue-assigned issue))
+      (format #t " (assigned: ~a)"
+              (string-join (issue-assigned issue)
+                           ", ")))
+    (when (> number-of-posts 1)
+      (format #t " [~a posts]" number-of-posts))
+    (newline)
+    (format #t "~a opened ~a by ~a"
+            issue-number
+            (issue-created-relative-date issue)
+            (issue-creator issue))
+    (when (> number-of-posts 1)
+      (format #t ", last updated ~a by ~a"
+              (issue-last-updated-relative-date issue)
+              (issue-last-updater issue)))
+    (unless (zero? (issue-tasks issue))
+      (format #t "; ~a/~a tasks done"
+              (issue-completed-tasks issue)
+              (issue-tasks issue)))
+    (newline)
+    (newline)))
 
 (define tissue-list
   (match-lambda*

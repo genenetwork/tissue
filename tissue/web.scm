@@ -150,7 +150,8 @@ NEW-EXTENSION."
                 (format " opened ~a by ~a"
                         (markup-option markup #:created-relative-date)
                         (markup-option markup #:creator))
-                (if (> (markup-option markup #:posts) 1)
+                (if (> (length (markup-option markup #:posts))
+                       1)
                     (format ", last updated ~a by ~a"
                             (markup-option markup #:last-updated-relative-date)
                             (markup-option markup #:last-updater))
