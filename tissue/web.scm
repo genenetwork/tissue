@@ -232,41 +232,41 @@ issue listings are not generated."
                                                           (issues)))
                                          output-file
                                          #:title title)))
-                (delete-duplicates (append-map issue-keywords (issues))))))
-  ;; Export user-created files.
-  (call-with-input-pipe
-   (lambda (port)
-     (port-transduce
-      (tmap (lambda (input-file)
-              (unless (string-prefix? "." (basename input-file))
-                (let* ((relative-input-file input-file)
-                       (output-file (string-append output-directory "/"
-                                                   (if (or (string-suffix? ".gmi" relative-input-file)
-                                                           (string-suffix? ".skb" relative-input-file))
-                                                       (replace-extension relative-input-file "html")
-                                                       relative-input-file))))
-                  (display (format "~a -> ~a~%" input-file output-file))
-                  (mkdir-p (dirname output-file))
-                  (if (or (string-suffix? ".gmi" input-file)
-                          (string-suffix? ".skb" input-file))
-                      (with-output-to-file output-file
-                        (cut evaluate-document
-                             ;; Files may be renamed or deleted, but
-                             ;; not committed. Therefore, raise an
-                             ;; exception if the file does not exist.
-                             (if (file-exists? input-file)
-                                 (call-with-input-file input-file
-                                   (cut evaluate-ast-from-port <>
-                                        ;; Relax the gemtext standard
-                                        ;; by joining adjacent lines.
-                                        #:reader (cond
-                                                  ((string-suffix? ".gmi" input-file)
-                                                   ((reader:make (lookup-reader 'gemtext))
-                                                    #:join-lines? #t))
-                                                  ((string-suffix? ".skb" input-file)
-                                                   ((reader:make (lookup-reader 'skribe)))))))
-                                 (raise (issue-file-not-found-error input-file)))
-                             (find-engine 'html)))
-                      (copy-file input-file output-file))))))
-      rcons get-line port))
-   "git" "ls-files"))
+                (delete-duplicates (append-map issue-keywords (issues)))))
+    ;; Export user-created files.
+    (call-with-input-pipe
+     (lambda (port)
+       (port-transduce
+        (tmap (lambda (input-file)
+                (unless (string-prefix? "." (basename input-file))
+                  (let* ((relative-input-file input-file)
+                         (output-file (string-append output-directory "/"
+                                                     (if (or (string-suffix? ".gmi" relative-input-file)
+                                                             (string-suffix? ".skb" relative-input-file))
+                                                         (replace-extension relative-input-file "html")
+                                                         relative-input-file))))
+                    (display (format "~a -> ~a~%" input-file output-file))
+                    (mkdir-p (dirname output-file))
+                    (if (or (string-suffix? ".gmi" input-file)
+                            (string-suffix? ".skb" input-file))
+                        (with-output-to-file output-file
+                          (cut evaluate-document
+                               ;; Files may be renamed or deleted, but
+                               ;; not committed. Therefore, raise an
+                               ;; exception if the file does not exist.
+                               (if (file-exists? input-file)
+                                   (call-with-input-file input-file
+                                     (cut evaluate-ast-from-port <>
+                                          ;; Relax the gemtext standard
+                                          ;; by joining adjacent lines.
+                                          #:reader (cond
+                                                    ((string-suffix? ".gmi" input-file)
+                                                     ((reader:make (lookup-reader 'gemtext))
+                                                      #:join-lines? #t))
+                                                    ((string-suffix? ".skb" input-file)
+                                                     ((reader:make (lookup-reader 'skribe)))))))
+                                   (raise (issue-file-not-found-error input-file)))
+                               (find-engine 'html)))
+                        (copy-file input-file output-file))))))
+        rcons get-line port))
+     "git" "ls-files")))
