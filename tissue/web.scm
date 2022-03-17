@@ -257,12 +257,14 @@ issue listings are not generated."
                              (if (file-exists? input-file)
                                  (call-with-input-file input-file
                                    (cut evaluate-ast-from-port <>
-                                        #:reader ((reader:make (lookup-reader
-                                                                (cond
-                                                                 ((string-suffix? ".gmi" input-file)
-                                                                  'gemtext)
-                                                                 ((string-suffix? ".skb" input-file)
-                                                                  'skribe)))))))
+                                        ;; Relax the gemtext standard
+                                        ;; by joining adjacent lines.
+                                        #:reader (cond
+                                                  ((string-suffix? ".gmi" input-file)
+                                                   ((reader:make (lookup-reader 'gemtext))
+                                                    #:join-lines? #t))
+                                                  ((string-suffix? ".skb" input-file)
+                                                   ((reader:make (lookup-reader 'skribe)))))))
                                  (raise (issue-file-not-found-error input-file)))
                              (find-engine 'html)))
                       (copy-file input-file output-file))))))
