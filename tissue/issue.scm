@@ -48,6 +48,7 @@
             post-author
             post-date
             post-relative-date
+            authors
             issues))
 
 (define %aliases
@@ -131,6 +132,21 @@ return #f."
   "Convert unix TIMESTAMP to an SRFI-19 date object."
   (time-monotonic->date
    (make-time time-monotonic 0 timestamp)))
+
+(define authors
+  (memoize-thunk
+   (lambda ()
+     "Return a list of all authors who have committed to this git
+repository."
+     (delete-duplicates
+      (map (cut resolve-alias <> (%aliases))
+           (call-with-input-pipe
+            (lambda (port)
+              (port-transduce (tmap (lambda (line)
+                                      (match (string-split line #\tab)
+                                        ((_ author) author))))
+                              rcons get-line port))
+            "git" "shortlog" "--summary"))))))
 
 (define (resolve-alias name aliases)
   "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
