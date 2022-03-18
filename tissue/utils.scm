@@ -21,7 +21,8 @@
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
   #:export (call-with-input-pipe
-            get-line-dos-or-unix))
+            get-line-dos-or-unix
+            memoize-thunk))
 
 (define (call-with-input-pipe proc program . args)
   "Execute PROGRAM ARGS ... in a subprocess with a pipe to it. Call
@@ -43,3 +44,11 @@ ports) in that it also supports DOS line endings."
     (if (eof-object? line)
         line
         (string-trim-right line #\return))))
+
+(define (memoize-thunk thunk)
+  "Return a function memoizing THUNK."
+  (let ((result #f))
+    (lambda ()
+      (unless result
+        (set! result (thunk)))
+      result)))

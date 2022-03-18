@@ -226,14 +226,6 @@ return #f."
      "--" file)
     result))
 
-(define (memoize-thunk thunk)
-  "Return a function memoizing THUNK."
-  (let ((result #f))
-    (lambda ()
-      (unless result
-        (set! result (thunk)))
-      result)))
-
 (define issues
   (memoize-thunk
    (lambda ()
