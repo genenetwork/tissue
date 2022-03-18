@@ -349,6 +349,15 @@ Show the text of issue #ISSUE-NUMBER.
                 port)))
            (raise (issue-file-not-found-error issue-file)))))))
 
+(define load-config
+  (memoize-thunk
+   (lambda ()
+     "Load configuration and return <tissue-configuration> object."
+     (load (string-append (call-with-input-pipe
+                           get-line
+                           "git" "rev-parse" "--show-toplevel")
+                          "/tissue.scm")))))
+
 (define tissue-web
   (match-lambda*
     (("--help")
@@ -358,10 +367,7 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 "
              (command-line-program)))
     ((output-directory)
-     (let ((config (load (string-append (call-with-input-pipe
-                                         get-line
-                                         "git" "rev-parse" "--show-toplevel")
-                                        "/tissue.scm"))))
+     (let ((config (load-config)))
        (build-website output-directory
                       #:title (tissue-configuration-project config)
                       #:css (tissue-configuration-web-css config)
