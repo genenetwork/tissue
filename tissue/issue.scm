@@ -72,6 +72,7 @@
   (open issue-open?)
   (tasks issue-tasks)
   (completed-tasks issue-completed-tasks)
+  ;; List of <post> objects, oldest first.
   (posts issue-posts))
 
 (define-record-type <post>
@@ -234,24 +235,25 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
      (lambda (port)
        (hashtable-set!
         result 'posts
-        (port-transduce
-         (compose (tenumerate)
-                  (tmap (match-lambda
-                          ((index . line)
-                           (let* ((alist (call-with-input-string line read))
-                                  (author (resolve-alias (assq-ref alist 'author)
-                                                         (%aliases)))
-                                  (date (assq-ref alist 'author-date))
-                                  (relative-date (assq-ref alist 'author-relative-date)))
-                             (when (zero? index)
-                               (hashtable-set! result 'last-updater author)
-                               (hashtable-set! result 'last-updated-date (unix-time->date date))
-                               (hashtable-set! result 'last-updated-relative-date relative-date))
-                             (hashtable-set! result 'creator author)
-                             (hashtable-set! result 'created-date (unix-time->date date))
-                             (hashtable-set! result 'created-relative-date relative-date)
-                             (post author date relative-date))))))
-         rcons get-line port)))
+        (reverse
+         (port-transduce
+          (compose (tenumerate)
+                   (tmap (match-lambda
+                           ((index . line)
+                            (let* ((alist (call-with-input-string line read))
+                                   (author (resolve-alias (assq-ref alist 'author)
+                                                          (%aliases)))
+                                   (date (assq-ref alist 'author-date))
+                                   (relative-date (assq-ref alist 'author-relative-date)))
+                              (when (zero? index)
+                                (hashtable-set! result 'last-updater author)
+                                (hashtable-set! result 'last-updated-date (unix-time->date date))
+                                (hashtable-set! result 'last-updated-relative-date relative-date))
+                              (hashtable-set! result 'creator author)
+                              (hashtable-set! result 'created-date (unix-time->date date))
+                              (hashtable-set! result 'created-relative-date relative-date)
+                              (post author date relative-date))))))
+          rcons get-line port))))
      "git" "log" "--follow"
      (string-append "--format=format:("
                     "(author . \"%an\")"
