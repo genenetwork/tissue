@@ -28,7 +28,8 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
   #:use-module (tissue utils)
-  #:export (issue
+  #:export (%aliases
+            issue
             issue-file
             issue-title
             issue-creator
@@ -48,6 +49,9 @@
             post-date
             post-relative-date
             issues))
+
+(define %aliases
+  (make-parameter #f))
 
 (define-record-type <issue>
   (issue file title creator created-date created-relative-date
@@ -128,6 +132,18 @@ return #f."
   (time-monotonic->date
    (make-time time-monotonic 0 timestamp)))
 
+(define (resolve-alias name aliases)
+  "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
+in the form of the argument of the same name to `tissue-configuration'
+in (tissue tissue). If no alias is found, NAME is returned as such."
+  (cond
+   ((find (cut member name <>)
+          aliases)
+    => (match-lambda
+         ((canonical-name _ ...) canonical-name)
+         (() name)))
+   (else name)))
+
 (define (file-details file)
   "Return a hashtable of details extracted from gemini FILE."
   (let ((result (make-eq-hashtable)))
@@ -162,7 +178,9 @@ return #f."
                                          ;; their keys.
                                          (for-each (match-lambda
                                                      (((or 'assign 'assigned) . values)
-                                                      (hashtable-append! result 'assigned values))
+                                                      (hashtable-append! result 'assigned
+                                                                         (map (cut resolve-alias <> (%aliases))
+                                                                              values)))
                                                      (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
                                                       (hashtable-append! result 'keywords values))
                                                      (_ #t))
@@ -205,7 +223,8 @@ return #f."
                   (tmap (match-lambda
                           ((index . line)
                            (let* ((alist (call-with-input-string line read))
-                                  (author (assq-ref alist 'author))
+                                  (author (resolve-alias (assq-ref alist 'author)
+                                                         (%aliases)))
                                   (date (assq-ref alist 'author-date))
                                   (relative-date (assq-ref alist 'author-relative-date)))
                              (when (zero? index)

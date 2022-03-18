@@ -402,18 +402,19 @@ To get usage information for one of these sub-commands, run
                          (current-error-port))
                 (newline (current-error-port))
                 (exit #f)))
-       (apply (match command
-                ("news" tissue-news)
-                ("list" tissue-list)
-                ("edit" tissue-edit)
-                ("show" tissue-show)
-                ("web" tissue-web)
-                (invalid-command
-                 (format (current-error-port) "Invalid command `~a'~%~%"
-                         invalid-command)
-                 (print-usage)
-                 (exit #f)))
-              args)))
+       (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
+         (apply (match command
+                  ("news" tissue-news)
+                  ("list" tissue-list)
+                  ("edit" tissue-edit)
+                  ("show" tissue-show)
+                  ("web" tissue-web)
+                  (invalid-command
+                   (format (current-error-port) "Invalid command `~a'~%~%"
+                           invalid-command)
+                   (print-usage)
+                   (exit #f)))
+                args))))
     ;; tissue is an alias for `tissue list'
     ((_)
      (tissue-list))))
