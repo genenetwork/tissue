@@ -417,6 +417,6 @@ To get usage information for one of these sub-commands, run
                 args))))
     ;; tissue is an alias for `tissue list'
     ((_)
-     (tissue-list))))
+     (main "tissue" "list"))))
 
 (apply main (command-line))
