@@ -27,6 +27,7 @@
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
+  #:use-module (tissue git)
   #:use-module (tissue utils)
   #:export (%aliases
             issue
@@ -266,39 +267,35 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
      ;; Get all gemini files except README.gmi and hidden files. Text
      ;; editors tend to create hidden files while editing, and we want to
      ;; avoid them.
-     (sort (call-with-input-pipe
-            (lambda (port)
-              (port-transduce
-               (tfilter-map (lambda (file)
-                              (and (string-suffix? ".gmi" file)
-                                   (not (string=? (basename file) "README.gmi"))
-                                   (not (string-prefix? "." (basename file)))
-                                   (let* ((file-details (file-details file))
-                                          ;; Downcase keywords to make
-                                          ;; them case-insensitive.
-                                          (all-keywords (map string-downcase
-                                                             (hashtable-ref file-details 'keywords '()))))
-                                     (issue file
-                                            ;; Fallback to filename if title has no alphabetic
-                                            ;; characters.
-                                            (let ((title (hashtable-ref file-details 'title "")))
-                                              (if (string-any char-set:letter title) title file))
-                                            (hashtable-ref file-details 'creator #f)
-                                            (hashtable-ref file-details 'created-date #f)
-                                            (hashtable-ref file-details 'created-relative-date #f)
-                                            (hashtable-ref file-details 'last-updater #f)
-                                            (hashtable-ref file-details 'last-updated-date #f)
-                                            (hashtable-ref file-details 'last-updated-relative-date #f)
-                                            (hashtable-ref file-details 'assigned '())
-                                            ;; "closed" is a special keyword to indicate
-                                            ;; the open/closed status of an issue.
-                                            (delete "closed" all-keywords)
-                                            (not (member "closed" all-keywords))
-                                            (hashtable-ref file-details 'tasks 0)
-                                            (hashtable-ref file-details 'completed-tasks 0)
-                                            (hashtable-ref file-details 'posts #f))))))
-               rcons get-line port))
-            "git" "ls-files")
+     (sort (filter-map (lambda (file)
+                         (and (string-suffix? ".gmi" file)
+                              (not (string=? (basename file) "README.gmi"))
+                              (not (string-prefix? "." (basename file)))
+                              (let* ((file-details (file-details file))
+                                     ;; Downcase keywords to make them
+                                     ;; case-insensitive.
+                                     (all-keywords (map string-downcase
+                                                        (hashtable-ref file-details 'keywords '()))))
+                                (issue file
+                                       ;; Fallback to filename if title has no alphabetic
+                                       ;; characters.
+                                       (let ((title (hashtable-ref file-details 'title "")))
+                                         (if (string-any char-set:letter title) title file))
+                                       (hashtable-ref file-details 'creator #f)
+                                       (hashtable-ref file-details 'created-date #f)
+                                       (hashtable-ref file-details 'created-relative-date #f)
+                                       (hashtable-ref file-details 'last-updater #f)
+                                       (hashtable-ref file-details 'last-updated-date #f)
+                                       (hashtable-ref file-details 'last-updated-relative-date #f)
+                                       (hashtable-ref file-details 'assigned '())
+                                       ;; "closed" is a special keyword to indicate
+                                       ;; the open/closed status of an issue.
+                                       (delete "closed" all-keywords)
+                                       (not (member "closed" all-keywords))
+                                       (hashtable-ref file-details 'tasks 0)
+                                       (hashtable-ref file-details 'completed-tasks 0)
+                                       (hashtable-ref file-details 'posts #f)))))
+                       (git-tracked-files))
            (lambda (issue1 issue2)
              (time<? (date->time-monotonic (issue-created-date issue1))
                      (date->time-monotonic (issue-created-date issue2))))))))
