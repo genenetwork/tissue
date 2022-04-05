@@ -17,25 +17,40 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (define-module (tissue tissue)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-71)
   #:export (tissue-configuration
             tissue-configuration?
             tissue-configuration-project
             tissue-configuration-aliases
             tissue-configuration-web-css
-            tissue-configuration-web-tags-path))
+            tissue-configuration-web-tags-path
+            tissue-configuration-web-files))
 
 (define-record-type <tissue-configuration>
-  (make-tissue-configuration project aliases web-css web-tags-path)
+  (make-tissue-configuration project aliases web-css web-tags-path web-files)
   tissue-configuration?
   (project tissue-configuration-project)
   (aliases tissue-configuration-aliases)
   (web-css tissue-configuration-web-css)
-  (web-tags-path tissue-configuration-web-tags-path))
+  (web-tags-path tissue-configuration-web-tags-path)
+  (web-files delayed-tissue-configuration-web-files))
 
-(define* (tissue-configuration #:key project (aliases '()) web-css (web-tags-path "/tags"))
-  "PROJECT is the name of the project. It is used in the title of the
-generated web pages, among other places.
+(define tissue-configuration-web-files
+  (compose force delayed-tissue-configuration-web-files))
+
+(define-syntax tissue-configuration
+  (lambda (x)
+    (syntax-case x ()
+      ((_ args ...)
+       (let ((before after (break (lambda (arg)
+                                    (eq? (syntax->datum arg)
+                                         #:web-files))
+                                  #'(args ...))))
+         #`(apply (lambda* (#:key project (aliases '()) web-css (web-tags-path "/tags") (web-files '()))
+                    "PROJECT is the name of the project. It is used in
+the title of the generated web pages, among other places.
 
 ALIASES is a list of aliases used to refer to authors in the
 repository. Each element is in turn a list of aliases an author goes
@@ -46,6 +61,14 @@ document root and must begin with a /. If it is #f, no stylesheet is
 used in the generated web pages.
 
 WEB-TAGS-PATH is the path relative to the document root where the
-per-tag issue listings are put. It must begin with a /. If it is #f,
-per-tag issue listings are not generated."
-  (make-tissue-configuration project aliases web-css web-tags-path))
+per-tag issue listings are put. It must begin with a /.
+
+WEB-FILES is a list of <file> objects representing files to be written
+to the web output."
+                    (make-tissue-configuration project aliases web-css web-tags-path web-files))
+                  (list #,@(append before
+                                   (syntax-case after ()
+                                     ((web-files-key web-files rest ...)
+                                      #`(web-files-key (delay web-files)
+                                                       rest ...))
+                                     (() #'()))))))))))

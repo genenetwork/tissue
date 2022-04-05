@@ -20,6 +20,7 @@
   #:use-module (rnrs exceptions)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-28)
   #:use-module (srfi srfi-171)
@@ -36,11 +37,33 @@
   #:use-module (tissue conditions)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
-  #:export (issue-listing
+  #:export (%project-name
+            %tags-path
+            file
+            file?
+            file-name
+            file-writer
+            issue-listing
+            replace-extension
+            copier
+            gemtext-reader
+            gemtext-exporter
+            skribe-exporter
+            tag-issue-lister
+            tag-pages
             build-website))
+
+(define %project-name
+  (make-parameter #f))
 
 (define %tags-path
   (make-parameter #f))
+
+(define-record-type <file>
+  (file name writer)
+  file?
+  (name file-name)
+  (writer file-writer))
 
 (define (mkdir-p directory)
   "Create DIRECTORY and all its parents."
@@ -192,87 +215,111 @@ default, all issues are listed newest first."
                                    #:posts (issue-posts issue)))
                 issues)))
 
-(define* (build-issue-listing issues output-file #:key title)
-  "Write an issues listing page listing ISSUES to OUTPUT-FILE."
-  (mkdir-p (dirname output-file))
-  (with-output-to-file output-file
-    (cut evaluate-document
-         (document #:title title
-                   (issue-listing issues))
-         (find-engine 'html))))
+(define (exporter file proc)
+  "Return a writer function that exports FILE using PROC. PROC is
+passed two arguments---the input port to read from and the output port
+to write to."
+  (lambda (out)
+    ;; Files may be renamed or deleted, but not committed. Therefore,
+    ;; raise an exception if the file does not exist.
+    (if (file-exists? file)
+        (call-with-input-file file
+          (cut proc <> out))
+        (raise (issue-file-not-found-error file)))))
+
+(define (copier file)
+  "Return a writer function that copies FILE."
+  (exporter file
+            (lambda (in out)
+              (port-transduce (tmap (cut put-bytevector out <>))
+                              (const #t)
+                              get-bytevector-some
+                              in))))
+
+(define (gemtext-reader)
+  "Return a skribilo reader for gemtext."
+  ((reader:make (lookup-reader 'gemtext))
+   ;; Relax the gemtext standard by joining adjacent lines.
+   #:join-lines? #t))
+
+(define* (gemtext-exporter file #:optional (reader (gemtext-reader)))
+  "Return a writer function that exports FILE, a gemtext file."
+  (exporter file
+            (lambda (in out)
+              (with-output-to-port out
+                (cut evaluate-document
+                     (evaluate-ast-from-port in #:reader reader)
+                     (find-engine 'html))))))
+
+(define* (skribe-exporter file #:optional (reader (make-reader 'skribe)))
+  "Return a writer function that exports FILE, a skribe file."
+  (exporter file
+            (lambda (in out)
+              (with-output-to-port out
+                (cut evaluate-document
+                     (evaluate-ast-from-port in #:reader reader)
+                     (find-engine 'html))))))
+
+(define* (tag-issue-lister tag #:key title)
+  "Return a writer function that writes a issue listing of issues with TAG.
+
+TITLE is the title to use in the head of the generated HTML, among
+other places."
+  (lambda (port)
+    (with-output-to-port port
+      (cut evaluate-document
+           (document #:title title
+                     (issue-listing
+                      (reverse (filter (lambda (issue)
+                                         (member tag (issue-keywords issue)))
+                                       (issues)))))
+           (find-engine 'html)))))
+
+(define (tag-pages)
+  "Return a list of <file> objects representing tag pages to be
+exported to the web output."
+  (map (lambda (tag)
+         (file (string-append (%tags-path) "/" (sanitize-string tag) ".html")
+               (tag-issue-lister tag
+                                 #:title (string-append tag " — " (%project-name)))))
+       (delete-duplicates (append-map issue-keywords (issues)))))
+
+(define (with-current-directory directory thunk)
+  "Change current directory to DIRECTORY, execute THUNK and restore
+original current directory."
+  (let ((previous-current-directory (getcwd)))
+    (dynamic-wind (const #t)
+                  thunk
+                  (cut chdir previous-current-directory))))
 
 ;; TODO: Use guile-filesystem.
-(define* (build-website output-directory #:key title css (tags-path "/tags"))
-  "Export current git repository to OUTPUT-DIRECTORY as a website.
-
-TITLE is the title to use head of the generated HTML, among other
-places.
+(define* (build-website repository-top-level output-directory css files)
+  "Export git repository with REPOSITORY-TOP-LEVEL to OUTPUT-DIRECTORY
+as a website.
 
 CSS is the path to a CSS stylesheet. If it is #f, no stylesheet is
 included in the generated web pages.
 
 TAGS-PATH is the path relative to the document root where the per-tag
 issue listings are put. It must begin with a /. If it is #f, per-tag
-issue listings are not generated."
+issue listings are not generated.
+
+FILES is a list of <file> objects representing files to be written to
+the web output."
+  ;; Set CSS.
   (when css
     (engine-custom-set! (find-engine 'html) 'css css))
+  ;; Create output directory.
   (mkdir-p output-directory)
-  ;; Export auto-generated files. We must do this before exporting
-  ;; user-created files to allow users to be able to override
-  ;; auto-generated files.
-  (parameterize ((%tags-path tags-path))
-    ;; Export home page listing all issues.
-    (let ((output-file (string-append output-directory "/index.html")))
-      (display (format "~a~%" output-file))
-      (build-issue-listing (reverse (issues)) output-file
-                           #:title title))
-    ;; Export per-tag listings.
-    (when tags-path
-      (for-each (lambda (tag)
-                  (let ((output-file (string-append output-directory
-                                                    tags-path "/"
-                                                    (sanitize-string tag) ".html")))
-                    (display (format "tag: ~a -> ~a~%" tag output-file))
-                    (build-issue-listing (reverse (filter (lambda (issue)
-                                                            (member tag (issue-keywords issue)))
-                                                          (issues)))
-                                         output-file
-                                         #:title title)))
-                (delete-duplicates (append-map issue-keywords (issues)))))
-    ;; Export user-created files.
-    (call-with-input-pipe
-     (lambda (port)
-       (port-transduce
-        (tmap (lambda (input-file)
-                (unless (string-prefix? "." (basename input-file))
-                  (let* ((relative-input-file input-file)
-                         (output-file (string-append output-directory "/"
-                                                     (if (or (string-suffix? ".gmi" relative-input-file)
-                                                             (string-suffix? ".skb" relative-input-file))
-                                                         (replace-extension relative-input-file "html")
-                                                         relative-input-file))))
-                    (display (format "~a -> ~a~%" input-file output-file))
-                    (mkdir-p (dirname output-file))
-                    (if (or (string-suffix? ".gmi" input-file)
-                            (string-suffix? ".skb" input-file))
-                        (with-output-to-file output-file
-                          (cut evaluate-document
-                               ;; Files may be renamed or deleted, but
-                               ;; not committed. Therefore, raise an
-                               ;; exception if the file does not exist.
-                               (if (file-exists? input-file)
-                                   (call-with-input-file input-file
-                                     (cut evaluate-ast-from-port <>
-                                          ;; Relax the gemtext standard
-                                          ;; by joining adjacent lines.
-                                          #:reader (cond
-                                                    ((string-suffix? ".gmi" input-file)
-                                                     ((reader:make (lookup-reader 'gemtext))
-                                                      #:join-lines? #t))
-                                                    ((string-suffix? ".skb" input-file)
-                                                     ((reader:make (lookup-reader 'skribe)))))))
-                                   (raise (issue-file-not-found-error input-file)))
-                               (find-engine 'html)))
-                        (copy-file input-file output-file))))))
-        rcons get-line port))
-     "git" "ls-files")))
+  ;; Write each of the <file> objects.
+  (for-each (lambda (file)
+              (let ((output-file
+                     (string-append output-directory "/" (file-name file))))
+                (display output-file (current-error-port))
+                (newline (current-error-port))
+                (mkdir-p (dirname output-file))
+                (call-with-output-file output-file
+                  (lambda (port)
+                    (with-current-directory repository-top-level
+                                            (cut (file-writer file) port))))))
+            files))

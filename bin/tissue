@@ -365,11 +365,13 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 "
              (command-line-program)))
     ((output-directory)
-     (let ((config (load-config)))
-       (build-website output-directory
-                      #:title (tissue-configuration-project config)
-                      #:css (tissue-configuration-web-css config)
-                      #:tags-path (tissue-configuration-web-tags-path config))))))
+     (parameterize ((%project-name (tissue-configuration-project (load-config)))
+                    (%tags-path (tissue-configuration-web-tags-path
+                                 (load-config))))
+       (build-website (git-top-level)
+                      output-directory
+                      (tissue-configuration-web-css (load-config))
+                      (tissue-configuration-web-files (load-config)))))))
 
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
