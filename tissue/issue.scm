@@ -138,11 +138,12 @@ return #f."
   (memoize-thunk
    (lambda ()
      "Return a list of all authors who have committed to this git
-repository."
-     (delete-duplicates
-      (append-map (lambda (issue)
-                    (map post-author (issue-posts issue)))
-                  (issues))))))
+repository. The returned list is sorted in lexicographic order."
+     (sort (delete-duplicates
+            (append-map (lambda (issue)
+                          (map post-author (issue-posts issue)))
+                        (issues)))
+           string<?))))
 
 (define (resolve-alias name aliases)
   "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
