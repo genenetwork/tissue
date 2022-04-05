@@ -21,7 +21,14 @@
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
   #:use-module (tissue utils)
-  #:export (git-tracked-files))
+  #:export (git-top-level
+            git-tracked-files))
+
+(define (git-top-level)
+  "Return the top-level directory of the current git repository."
+  (call-with-input-pipe
+      get-line
+    "git" "rev-parse" "--show-toplevel"))
 
 (define (git-tracked-files)
   "Return a list of all files tracked in the current git repository."
