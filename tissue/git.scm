@@ -25,10 +25,16 @@
             git-tracked-files))
 
 (define (git-top-level)
-  "Return the top-level directory of the current git repository."
-  (call-with-input-pipe
-      get-line
-    "git" "rev-parse" "--show-toplevel"))
+  "Return the top-level directory of the current git
+repository."
+  (let loop ((curdir (getcwd)))
+    (cond
+     ((file-exists? (string-append curdir "/.git"))
+      curdir)
+     ((string=? curdir "/")
+      (error "No git top level found"))
+     (else
+      (loop (dirname curdir))))))
 
 (define (git-tracked-files)
   "Return a list of all files tracked in the current git repository."
