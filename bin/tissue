@@ -1,4 +1,5 @@
-#! /usr/bin/env guile
+#!/usr/bin/env sh
+exec guile --no-auto-compile -s "$0" "$@"
 !#
 
 ;;; tissue --- Text based issue tracker
