@@ -403,7 +403,8 @@ To get usage information for one of these sub-commands, run
                          (current-error-port))
                 (newline (current-error-port))
                 (exit #f)))
-       (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
+       (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
+                      (%aliases (tissue-configuration-aliases (load-config))))
          (apply (match command
                   ("news" tissue-news)
                   ("list" tissue-list)

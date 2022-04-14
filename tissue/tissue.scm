@@ -20,25 +20,40 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-71)
+  #:use-module (tissue git)
   #:export (tissue-configuration
             tissue-configuration?
             tissue-configuration-project
             tissue-configuration-aliases
+            tissue-configuration-issue-files
             tissue-configuration-web-css
             tissue-configuration-web-tags-path
-            tissue-configuration-web-files))
+            tissue-configuration-web-files
+            gemtext-files-in-directory))
 
 (define-record-type <tissue-configuration>
-  (make-tissue-configuration project aliases web-css web-tags-path web-files)
+  (make-tissue-configuration project aliases issue-files web-css web-tags-path web-files)
   tissue-configuration?
   (project tissue-configuration-project)
   (aliases tissue-configuration-aliases)
+  (issue-files tissue-configuration-issue-files)
   (web-css tissue-configuration-web-css)
   (web-tags-path tissue-configuration-web-tags-path)
   (web-files delayed-tissue-configuration-web-files))
 
 (define tissue-configuration-web-files
   (compose force delayed-tissue-configuration-web-files))
+
+(define* (gemtext-files-in-directory #:optional directory)
+  "Return a list of all gemtext files in DIRECTORY tracked in the
+current git repository. If DIRECTORY is #f, return the list of all
+gemtext files tracked in the current git repository regardless of
+which directory they are in."
+  (filter (lambda (filename)
+            (and (or (not directory)
+                     (string-prefix? directory filename))
+                 (string-suffix? ".gmi" filename)))
+          (git-tracked-files)))
 
 (define-syntax tissue-configuration
   (lambda (x)
@@ -48,13 +63,17 @@
                                     (eq? (syntax->datum arg)
                                          #:web-files))
                                   #'(args ...))))
-         #`(apply (lambda* (#:key project (aliases '()) web-css (web-tags-path "/tags") (web-files '()))
+         #`(apply (lambda* (#:key project (aliases '())
+                            (issue-files (gemtext-files-in-directory))
+                            web-css (web-tags-path "/tags") (web-files '()))
                     "PROJECT is the name of the project. It is used in
 the title of the generated web pages, among other places.
 
 ALIASES is a list of aliases used to refer to authors in the
 repository. Each element is in turn a list of aliases an author goes
 by, the first of which is the canonical name of that author.
+
+ISSUE-FILES is a list of files that pertain to issues.
 
 WEB-CSS is the path to a CSS stylesheet. It is relative to the
 document root and must begin with a /. If it is #f, no stylesheet is
@@ -65,7 +84,7 @@ per-tag issue listings are put. It must begin with a /.
 
 WEB-FILES is a list of <file> objects representing files to be written
 to the web output."
-                    (make-tissue-configuration project aliases web-css web-tags-path web-files))
+                    (make-tissue-configuration project aliases issue-files web-css web-tags-path web-files))
                   (list #,@(append before
                                    (syntax-case after ()
                                      ((web-files-key web-files rest ...)
