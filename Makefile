@@ -36,7 +36,7 @@ scripts = $(wildcard bin/*)
 scmdir = $(datarootdir)/guile/site/$(guile_effective_version)/$(top_level_module_dir)
 godir = $(libdir)/guile/$(guile_effective_version)/site-ccache/$(top_level_module_dir)
 
-.PHONY: all check install
+.PHONY: all check install clean
 
 all: $(objects)
 
@@ -49,3 +49,6 @@ install: $(scripts)
 	install -D $^ --target-directory $(bindir)
 	install -D $(sources) --target-directory $(scmdir)
 	install -D $(objects) --target-directory $(godir)
+
+clean:
+	rm -f $(objects)
