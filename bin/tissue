@@ -357,6 +357,30 @@ Show the text of issue #ISSUE-NUMBER.
      "Load configuration and return <tissue-configuration> object."
      (load (string-append (git-top-level) "/tissue.scm")))))
 
+(define tissue-repl
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a repl [-- FILE ARGS...]
+In a tissue execution environment, run FILE as a Guile script with
+command-line arguments ARGS.
+
+"
+             (command-line-program)))
+    (args
+     (let ((args (args-fold args
+                            '()
+                            invalid-option
+                            (lambda (arg result)
+                              (acons 'script arg result))
+                            '())))
+       (match (reverse (filter-map (match-lambda
+                                     (('script . arg) arg)
+                                     (_ #f))
+                                   args))
+         ((script args ...)
+          (set-program-arguments (cons script args))
+          (load (canonicalize-path script))))))))
+
 (define tissue-web
   (match-lambda*
     (("--help")
@@ -383,6 +407,7 @@ COMMAND must be one of the sub-commands listed below:
   edit      edit an issue
   show      show the text of an issue
   news      list recent updates
+  repl      run a Guile script in a tissue environment
   web       export repository as website
 
 To get usage information for one of these sub-commands, run
@@ -410,6 +435,7 @@ To get usage information for one of these sub-commands, run
                   ("list" tissue-list)
                   ("edit" tissue-edit)
                   ("show" tissue-show)
+                  ("repl" tissue-repl)
                   ("web" tissue-web)
                   (invalid-command
                    (format (current-error-port) "Invalid command `~a'~%~%"
