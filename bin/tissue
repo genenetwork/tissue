@@ -355,7 +355,7 @@ Show the text of issue #ISSUE-NUMBER.
   (memoize-thunk
    (lambda ()
      "Load configuration and return <tissue-configuration> object."
-     (load (string-append (git-top-level) "/tissue.scm")))))
+     (load (canonicalize-path "tissue.scm")))))
 
 (define tissue-repl
   (match-lambda*
@@ -393,7 +393,7 @@ Export the repository as a website to OUTPUT-DIRECTORY.
      (parameterize ((%project-name (tissue-configuration-project (load-config)))
                     (%tags-path (tissue-configuration-web-tags-path
                                  (load-config))))
-       (build-website (git-top-level)
+       (build-website (getcwd)
                       output-directory
                       (tissue-configuration-web-css (load-config))
                       (tissue-configuration-web-files (load-config)))))))
@@ -428,21 +428,23 @@ To get usage information for one of these sub-commands, run
                          (current-error-port))
                 (newline (current-error-port))
                 (exit #f)))
-       (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
-                      (%aliases (tissue-configuration-aliases (load-config))))
-         (apply (match command
-                  ("news" tissue-news)
-                  ("list" tissue-list)
-                  ("edit" tissue-edit)
-                  ("show" tissue-show)
-                  ("repl" tissue-repl)
-                  ("web" tissue-web)
-                  (invalid-command
-                   (format (current-error-port) "Invalid command `~a'~%~%"
-                           invalid-command)
-                   (print-usage)
-                   (exit #f)))
-                args))))
+       (call-with-current-directory (git-top-level)
+         (lambda ()
+           (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
+                          (%aliases (tissue-configuration-aliases (load-config))))
+             (apply (match command
+                      ("news" tissue-news)
+                      ("list" tissue-list)
+                      ("edit" tissue-edit)
+                      ("show" tissue-show)
+                      ("repl" tissue-repl)
+                      ("web" tissue-web)
+                      (invalid-command
+                       (format (current-error-port) "Invalid command `~a'~%~%"
+                               invalid-command)
+                       (print-usage)
+                       (exit #f)))
+                    args))))))
     ;; tissue is an alias for `tissue list'
     ((_)
      (main "tissue" "list"))))
