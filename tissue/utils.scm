@@ -20,9 +20,18 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
-  #:export (call-with-input-pipe
+  #:export (call-with-current-directory
+            call-with-input-pipe
             get-line-dos-or-unix
             memoize-thunk))
+
+(define (call-with-current-directory curdir thunk)
+  "Call THUNK with current directory set to CURDIR. Restore current
+directory after THUNK returns."
+  (let ((original-current-directory (getcwd)))
+    (dynamic-wind (cut chdir curdir)
+                  thunk
+                  (cut chdir original-current-directory))))
 
 (define (call-with-input-pipe proc program . args)
   "Execute PROGRAM ARGS ... in a subprocess with a pipe to it. Call
