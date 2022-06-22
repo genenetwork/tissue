@@ -41,41 +41,11 @@ exec guile --no-auto-compile -s "$0" "$@"
   (unless (zero? (apply system* program args))
     (error "Invocation of program failed" (cons program args))))
 
-(define (git-updated-files transducer start-commit end-commit)
-  "Use TRANSDUCER to transduce over the list of files updated between
-START-COMMIT and END-COMMIT."
-  (call-with-input-pipe
-   (lambda (port)
-     (port-transduce (compose (tmap (lambda (line)
-                                      (match (string-split line #\tab)
-                                        ((status file)
-                                         (list (match status
-                                                 ("A" 'added)
-                                                 ("D" 'deleted)
-                                                 ("M" 'modified))
-                                               file)))))
-                              transducer)
-                     (const #t) get-line port))
-   "git" "diff" "--stat" "--name-status"
-   (string-append start-commit ".." end-commit)))
-
 (define rlast
   (case-lambda
     (() #f)
     ((result) result)
     ((result input) input)))
-
-(define (git-first-commit-since since)
-  "Return the hash of the first git commit since SINCE, where SINCE is
-passed verbatim to the --since argument of `git log'. Return #f if
-there is no such commit."
-  (call-with-input-pipe
-   (lambda (port)
-     (port-transduce (tmap identity)
-                     rlast
-                     get-line
-                     port))
-   "git" "log" "--format=format:%H" "--since" since))
 
 ;;;
 ;;; 3 bit colors using ANSI escape codes
@@ -113,42 +83,6 @@ terminal."
 to run tissue."
   (match (command-line)
     ((program _ ...) program)))
-
-(define tissue-news
-  (match-lambda*
-    (("--help")
-     (format #t "Usage: ~a news
-List recent updates.
-
-  --since=DATE  show updates more recent than DATE
-
-"
-             (command-line-program)))
-    (args
-     (let ((args (args-fold args
-                            (list (option (list "since") #t #f
-                                          (lambda (opt name arg loads)
-                                            (acons 'since arg loads))))
-                            invalid-option
-                            invalid-operand
-                            '())))
-       (unless (assq 'since args)
-         (error "--since argument required"))
-       (git-updated-files (tlog (match-lambda*
-                                  ((_ (status file))
-                                   (format #t ((case status
-                                                 ((added) green)
-                                                 ((deleted) red)
-                                                 ((modified) magenta))
-                                               "~a (~a)~%")
-                                           file
-                                           (case status
-                                             ((added) "new")
-                                             ((deleted) "deleted")
-                                             ((modified) "updated"))))))
-                          (or (git-first-commit-since (assq-ref args 'since))
-                              "HEAD")
-                          "HEAD")))))
 
 (define (print-issue issue-number issue)
   "Print ISSUE with number ISSUE-NUMBER."
@@ -406,7 +340,6 @@ COMMAND must be one of the sub-commands listed below:
   list      list issues
   edit      edit an issue
   show      show the text of an issue
-  news      list recent updates
   repl      run a Guile script in a tissue environment
   web       export repository as website
 
@@ -433,7 +366,6 @@ To get usage information for one of these sub-commands, run
            (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
                           (%aliases (tissue-configuration-aliases (load-config))))
              (apply (match command
-                      ("news" tissue-news)
                       ("list" tissue-list)
                       ("edit" tissue-edit)
                       ("show" tissue-show)
