@@ -23,6 +23,7 @@ exec guile --no-auto-compile -s "$0" "$@"
 (import (rnrs exceptions)
         (rnrs io ports)
         (srfi srfi-1)
+        (srfi srfi-19)
         (srfi srfi-26)
         (srfi srfi-37)
         (srfi srfi-171)
@@ -72,6 +73,26 @@ terminal."
 (define magenta-background (cut color 45 <>))
 (define cyan-background (cut color 46 <>))
 
+(define (human-date-string date)
+  "Return a human readable rendering of DATE."
+  (let ((elapsed-time
+         (time-second
+          (time-difference (date->time-monotonic (current-date))
+                           (date->time-monotonic date)))))
+    (cond
+     ((< elapsed-time (* 2 60))
+      (format #f "~a seconds ago" elapsed-time))
+     ((< elapsed-time (* 2 60 60))
+      (format #f "~a minutes ago" (round (/ elapsed-time 60))))
+     ((< elapsed-time (* 2 24 60 60))
+      (format #f "~a hours ago" (round (/ elapsed-time 60 60))))
+     ((< elapsed-time (* 2 7 24 60 60))
+      (format #f "~a days ago" (round (/ elapsed-time 60 60 24))))
+     ((< elapsed-time (* 2 30 24 60 60))
+      (format #f "~a weeks ago" (round (/ elapsed-time 60 60 24 7))))
+     (else
+      (format #f "on ~a" (date->string date "~b ~d ~Y"))))))
+
 (define (invalid-option opt name arg loads)
   (error "Invalid option" name))
 
@@ -117,13 +138,13 @@ to run tissue."
     (display (string-append
               (cyan (string-append "#" (number->string issue-number)))
               " opened "
-              (cyan (issue-created-relative-date issue))
+              (cyan (human-date-string (issue-created-date issue)))
               " by "
               (cyan (issue-creator issue))))
     (when (> number-of-posts 1)
       (display (string-append (cyan ",")
                               " last updated "
-                              (cyan (issue-last-updated-relative-date issue))
+                              (cyan (human-date-string (issue-last-updated-date issue)))
                               " by "
                               (cyan (issue-last-updater issue)))))
     (unless (zero? (issue-tasks issue))
@@ -151,11 +172,11 @@ to run tissue."
     (newline)
     (format #t "~a opened ~a by ~a"
             issue-number
-            (issue-created-relative-date issue)
+            (human-date-string (issue-created-date issue))
             (issue-creator issue))
     (when (> number-of-posts 1)
       (format #t ", last updated ~a by ~a"
-              (issue-last-updated-relative-date issue)
+              (human-date-string (issue-last-updated-date issue))
               (issue-last-updater issue)))
     (unless (zero? (issue-tasks issue))
       (format #t "; ~a/~a tasks done"
