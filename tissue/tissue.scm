@@ -53,7 +53,7 @@ which directory they are in."
             (and (or (not directory)
                      (string-prefix? directory filename))
                  (string-suffix? ".gmi" filename)))
-          (git-tracked-files)))
+          (git-tracked-files (current-git-repository))))
 
 (define-syntax tissue-configuration
   (lambda (x)

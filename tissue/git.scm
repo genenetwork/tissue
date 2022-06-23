@@ -175,10 +175,9 @@ repository."
   "Return the current git repository."
   (repository-open (git-top-level)))
 
-(define (git-tracked-files)
-  "Return a list of all files tracked in the current git repository. The
-returned filenames are relative to the top-level directory of the
-current git repository and do not have a leading slash."
+(define (git-tracked-files repository)
+  "Return a list of all files tracked in REPOSITORY. The returned
+filenames are relative to the top-level directory of REPOSITORY and do
+not have a leading slash."
   (map index-entry-path
-       (index-entries (repository-index
-                       (repository-open (git-top-level))))))
+       (index-entries (repository-index repository))))
