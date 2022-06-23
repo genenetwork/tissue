@@ -20,6 +20,7 @@
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
   #:use-module (git)
@@ -40,6 +41,7 @@
   #:use-module (tissue utils)
   #:export (git-top-level
             current-git-repository
+            commit-date
             git-tracked-files))
 
 ;; We bind additional functions from libgit2 that are not already
@@ -181,6 +183,13 @@ repository."
 (define (current-git-repository)
   "Return the current git repository."
   (repository-open (git-top-level)))
+
+(define (commit-date commit)
+  (time-monotonic->date
+   (make-time time-monotonic
+              0
+              (commit-time commit))
+   (* 60 (commit-time-offset commit))))
 
 (define (git-tracked-files repository)
   "Return a list of all files tracked in REPOSITORY. The returned
