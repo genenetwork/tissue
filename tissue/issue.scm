@@ -48,6 +48,10 @@
             post
             post-author
             post-date
+            issue->alist
+            alist->issue
+            post->alist
+            alist->post
             authors
             issues))
 
@@ -80,6 +84,57 @@
   post?
   (author post-author)
   (date post-date))
+
+(define (date->iso-8601 date)
+  "Convert DATE, an SRFI-19 date object, to an ISO-8601 date string."
+  (date->string date "~4"))
+
+(define (iso-8601->date str)
+  "Convert STR, an ISO-8601 date string, to an SRFI-19 date object."
+  (string->date str "~Y-~m-~dT~H:~M:~S~z"))
+
+(define (issue->alist issue)
+  "Convert ISSUE, a <issue> object, to an association list that can be
+serialized."
+  `((file . ,(issue-file issue))
+    (title . ,(issue-title issue))
+    (creator . ,(issue-creator issue))
+    (created-date . ,(date->iso-8601 (issue-created-date issue)))
+    (last-updater . ,(issue-last-updater issue))
+    (last-updated-date . ,(date->iso-8601 (issue-last-updated-date issue)))
+    (assigned . ,(issue-assigned issue))
+    (keywords . ,(issue-keywords issue))
+    (open . ,(issue-open? issue))
+    (tasks . ,(issue-tasks issue))
+    (completed-tasks . , (issue-completed-tasks issue))
+    (posts . ,(map post->alist (issue-posts issue)))))
+
+(define (post->alist post)
+  "Convert POST, a <post> object, to an association list that can be
+serialized."
+  `((author . ,(post-author post))
+    (date . ,(date->iso-8601 (post-date post)))))
+
+(define (alist->issue alist)
+  "Convert ALIST to an <issue> object."
+  (issue (assq-ref alist 'file)
+         (assq-ref alist 'title)
+         (assq-ref alist 'creator)
+         (iso-8601->date (assq-ref alist 'created-date))
+         (assq-ref alist 'last-updater)
+         (iso-8601->date (assq-ref alist 'last-updated-date))
+         (assq-ref alist 'assigned)
+         (assq-ref alist 'keywords)
+         (assq-ref alist 'open)
+         (assq-ref alist 'tasks)
+         (assq-ref alist 'completed-tasks)
+         (map alist->post
+              (assq-ref alist 'posts))))
+
+(define (alist->post alist)
+  "Convert ALIST to a <post> object."
+  (post (assq-ref alist 'author)
+        (iso-8601->date (assq-ref alist 'date))))
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
