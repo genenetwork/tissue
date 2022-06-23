@@ -26,7 +26,8 @@
   #:use-module (git types)
   ;; There are many name conflicts between (system foreign). So, we
   ;; carefully select a few and prefix the rest.
-  #:use-module ((system foreign) #:select (null-pointer?
+  #:use-module ((system foreign) #:select (%null-pointer
+                                           null-pointer?
                                            pointer->string
                                            make-pointer
                                            dereference-pointer))
@@ -158,6 +159,12 @@ return value is a list of <index-entry> objects."
   (map (lambda (i)
          (index-entry index i))
        (iota (index-entry-count index))))
+
+(define diff-find-similar!
+  (let ((proc (libgit2->procedure* "git_diff_find_similar" '(* *))))
+    (lambda (diff)
+      (proc (diff->pointer diff) %null-pointer)
+      diff)))
 
 (define (git-top-level)
   "Return the top-level directory of the current git
