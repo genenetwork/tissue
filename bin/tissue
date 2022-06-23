@@ -31,6 +31,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (ice-9 match)
         (ice-9 popen)
         (ice-9 regex)
+        (term ansi-color)
         (tissue conditions)
         (tissue git)
         (tissue issue)
@@ -47,31 +48,6 @@ exec guile --no-auto-compile -s "$0" "$@"
     (() #f)
     ((result) result)
     ((result input) input)))
-
-;;;
-;;; 3 bit colors using ANSI escape codes
-;;;
-
-(define (color code str)
-  "Return STR within ANSI escape CODE, thus rendering it in color in a
-terminal."
-  (format #f "~a[~am~a~a[0m" #\esc code str #\esc))
-
-(define bold (cut color 1 <>))
-
-(define red (cut color 31 <>))
-(define green (cut color 32 <>))
-(define yellow (cut color 33 <>))
-(define blue (cut color 34 <>))
-(define magenta (cut color 35 <>))
-(define cyan (cut color 36 <>))
-
-(define red-background (cut color 41 <>))
-(define green-background (cut color 42 <>))
-(define yellow-background (cut color 43 <>))
-(define blue-background (cut color 44 <>))
-(define magenta-background (cut color 45 <>))
-(define cyan-background (cut color 46 <>))
 
 (define (human-date-string date)
   "Return a human readable rendering of DATE."
@@ -108,47 +84,52 @@ to run tissue."
 (define (print-issue issue-number issue)
   "Print ISSUE with number ISSUE-NUMBER."
   (let ((number-of-posts (length (issue-posts issue))))
-    (display (magenta (issue-title issue)))
+    (display (colorize-string (issue-title issue) 'MAGENTA))
     ;; Highlight keywords containing "bug" or "critical" as whole
     ;; words in red. Else, highlight in blue.
     (unless (null? (issue-keywords issue))
       (display " ")
       (display (string-join
                 (map (lambda (keyword)
-                       ((cond
-                         ((not (null? (lset-intersection
-                                       string=?
-                                       (string-split keyword #\space)
-                                       (list "bug" "critical"))))
-                          red-background)
-                         (else blue-background))
+                       ((cut colorize-string
+                             <>
+                             (cond
+                              ((not (null? (lset-intersection
+                                            string=?
+                                            (string-split keyword #\space)
+                                            (list "bug" "critical"))))
+                               'ON-RED)
+                              (else 'ON-BLUE)))
                         (string-append " " keyword " ")))
                      (issue-keywords issue))
                 " ")))
     (unless (null? (issue-assigned issue))
-      (display (green (string-append " (assigned: "
-                                     (string-join (issue-assigned issue)
-                                                  ", ")
-                                     ")"))))
+      (display (colorize-string (string-append " (assigned: "
+                                               (string-join (issue-assigned issue)
+                                                            ", ")
+                                               ")")
+                                'GREEN)))
     (when (> number-of-posts 1)
       (display (string-append " ["
                               (number->string number-of-posts)
                               " posts]")))
     (newline)
     (display (string-append
-              (cyan (string-append "#" (number->string issue-number)))
+              (colorize-string (string-append "#" (number->string issue-number)) 'CYAN)
               " opened "
-              (cyan (human-date-string (issue-created-date issue)))
+              (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
               " by "
-              (cyan (issue-creator issue))))
+              (colorize-string (issue-creator issue) 'CYAN)))
     (when (> number-of-posts 1)
-      (display (string-append (cyan ",")
+      (display (string-append (colorize-string "," 'CYAN)
                               " last updated "
-                              (cyan (human-date-string (issue-last-updated-date issue)))
+                              (colorize-string (human-date-string (issue-last-updated-date issue))
+                                               'CYAN)
                               " by "
-                              (cyan (issue-last-updater issue)))))
+                              (colorize-string (issue-last-updater issue)
+                                               'CYAN))))
     (unless (zero? (issue-tasks issue))
-      (display (string-append (cyan "; ")
+      (display (string-append (colorize-string "; " 'CYAN)
                               (number->string (issue-completed-tasks issue))
                               "/"
                               (number->string (issue-tasks issue))
@@ -281,25 +262,25 @@ Show the text of issue #ISSUE-NUMBER.
                             (cond
                              ;; Print headlines in bold.
                              ((string-prefix? "#" line)
-                              (display (bold line)))
+                              (display (colorize-string line 'BOLD)))
                              ;; Print lists in cyan.
                              ((string-prefix? "*" line)
-                              (display (cyan line)))
+                              (display (colorize-string line 'CYAN)))
                              ;; Print links in cyan, but only the actual
                              ;; link, and not the => prefix or the label.
                              ((string-match "^(=>[ \t]*)([^ ]*)([^\n]*)" line)
                               => (lambda (m)
                                    (display (match:substring m 1))
-                                   (display (cyan (match:substring m 2)))
+                                   (display (colorize-string (match:substring m 2) 'CYAN))
                                    (display (match:substring m 3))))
                              ;; Print preformatted text backticks in
                              ;; magenta.
                              ((string-prefix? "```" line)
-                              (display (magenta line)))
+                              (display (colorize-string line 'MAGENTA)))
                              (else
                               ;; If part of preformatted block, print in
                               ;; magenta. Else, print in default color.
-                              (display (if pre? (magenta line) line))))))
+                              (display (if pre? (colorize-string line 'MAGENTA) line))))))
                          (newline))))
                 (const #t)
                 get-line-dos-or-unix
