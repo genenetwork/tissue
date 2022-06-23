@@ -18,11 +18,13 @@
 
 (define-module (tissue git)
   #:use-module (rnrs arithmetic bitwise)
+  #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
+  #:use-module (ice-9 match)
   #:use-module (git)
   #:use-module (git types)
   ;; There are many name conflicts between (system foreign). So, we
@@ -42,7 +44,8 @@
   #:export (git-top-level
             current-git-repository
             commit-date
-            git-tracked-files))
+            git-tracked-files
+            file-modification-table))
 
 ;; We bind additional functions from libgit2 that are not already
 ;; bound in guile-git. TODO: Contribute them to guile-git.
@@ -197,3 +200,54 @@ filenames are relative to the top-level directory of REPOSITORY and do
 not have a leading slash."
   (map index-entry-path
        (index-entries (repository-index repository))))
+
+(define (commit-deltas repository commit)
+  "Return the list of <diff-delta> objects created by COMMIT with
+respect to its first parent in REPOSITORY."
+  (match (commit-parents commit)
+    ((parent _ ...)
+     (let ((diff (diff-tree-to-tree repository
+                                    (commit-tree parent)
+                                    (commit-tree commit))))
+       (diff-find-similar! diff)
+       (diff-fold (lambda (delta progress result)
+                    (cons delta result))
+                  (lambda (delta binary result)
+                    result)
+                  (lambda (delta hunk result)
+                    result)
+                  (lambda (delta hunk line result)
+                    result)
+                  (list)
+                  diff)))
+    (() (list))))
+
+(define (file-modification-table repository)
+  "Return a hashtable mapping files to the list of commits in REPOSITORY
+that modified them."
+  (let ((result (make-hashtable string-hash string=?))
+        (renames (make-hashtable string-hash string=?)))
+    (fold-commits
+     (lambda (commit _)
+       (map (lambda (delta)
+              ;; Map old filename to current filename if they are
+              ;; different. Note that this manner of following renames
+              ;; requires a linear git history and will not work with
+              ;; branch merges.
+              (unless (string=? (diff-file-path (diff-delta-old-file delta))
+                                (diff-file-path (diff-delta-new-file delta)))
+                (hashtable-set! renames
+                                (diff-file-path (diff-delta-old-file delta))
+                                (diff-file-path (diff-delta-new-file delta))))
+              (hashtable-update! result
+                                 ;; If necessary, translate old
+                                 ;; filename to current filename.
+                                 (hashtable-ref renames
+                                                (diff-file-path (diff-delta-old-file delta))
+                                                (diff-file-path (diff-delta-old-file delta)))
+                                 (cut cons commit <>)
+                                 (list)))
+            (commit-deltas repository commit)))
+     #f
+     repository)
+    result))

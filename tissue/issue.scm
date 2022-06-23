@@ -27,6 +27,7 @@
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
+  #:use-module (git)
   #:use-module (tissue git)
   #:use-module (tissue utils)
   #:export (%issue-files
@@ -225,32 +226,6 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                           (const #t)
                           get-line-dos-or-unix
                           port))))
-    (call-with-input-pipe
-     (lambda (port)
-       (hashtable-set!
-        result 'posts
-        (reverse
-         (port-transduce
-          (compose (tenumerate)
-                   (tmap (match-lambda
-                           ((index . line)
-                            (let* ((alist (call-with-input-string line read))
-                                   (author (resolve-alias (assq-ref alist 'author)
-                                                          (%aliases)))
-                                   (date (assq-ref alist 'author-date)))
-                              (when (zero? index)
-                                (hashtable-set! result 'last-updater author)
-                                (hashtable-set! result 'last-updated-date (unix-time->date date)))
-                              (hashtable-set! result 'creator author)
-                              (hashtable-set! result 'created-date (unix-time->date date))
-                              (post author date))))))
-          rcons get-line port))))
-     "git" "log" "--follow"
-     (string-append "--format=format:("
-                    "(author . \"%an\")"
-                    "(author-date . %at)"
-                    ")")
-     "--" file)
     result))
 
 (define issues
@@ -260,30 +235,39 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
      ;; Get all gemini files except README.gmi and hidden files. Text
      ;; editors tend to create hidden files while editing, and we want to
      ;; avoid them.
-     (sort (filter-map (lambda (file)
-                         (let* ((file-details (file-details file))
-                                ;; Downcase keywords to make them
-                                ;; case-insensitive.
-                                (all-keywords (map string-downcase
-                                                   (hashtable-ref file-details 'keywords '()))))
-                           (issue file
-                                  ;; Fallback to filename if title has no alphabetic
-                                  ;; characters.
-                                  (let ((title (hashtable-ref file-details 'title "")))
-                                    (if (string-any char-set:letter title) title file))
-                                  (hashtable-ref file-details 'creator #f)
-                                  (hashtable-ref file-details 'created-date #f)
-                                  (hashtable-ref file-details 'last-updater #f)
-                                  (hashtable-ref file-details 'last-updated-date #f)
-                                  (hashtable-ref file-details 'assigned '())
-                                  ;; "closed" is a special keyword to indicate
-                                  ;; the open/closed status of an issue.
-                                  (delete "closed" all-keywords)
-                                  (not (member "closed" all-keywords))
-                                  (hashtable-ref file-details 'tasks 0)
-                                  (hashtable-ref file-details 'completed-tasks 0)
-                                  (hashtable-ref file-details 'posts #f))))
-                       (%issue-files))
-           (lambda (issue1 issue2)
-             (time<? (date->time-monotonic (issue-created-date issue1))
-                     (date->time-monotonic (issue-created-date issue2))))))))
+     (let ((file-modification-table (file-modification-table (current-git-repository))))
+       (sort (filter-map (lambda (file)
+                           (let* ((file-details (file-details file))
+                                  ;; Downcase keywords to make them
+                                  ;; case-insensitive.
+                                  (all-keywords (map string-downcase
+                                                     (hashtable-ref file-details 'keywords '())))
+                                  (commits (hashtable-ref file-modification-table file #f))
+                                  (commit-authors (map (lambda (commit)
+                                                         (resolve-alias (signature-name (commit-author commit))
+                                                                        (%aliases)))
+                                                       commits)))
+                             (issue file
+                                    ;; Fallback to filename if title has no alphabetic
+                                    ;; characters.
+                                    (let ((title (hashtable-ref file-details 'title "")))
+                                      (if (string-any char-set:letter title) title file))
+                                    (first commit-authors)
+                                    (commit-date (first commits))
+                                    (last commit-authors)
+                                    (commit-date (last commits))
+                                    (hashtable-ref file-details 'assigned '())
+                                    ;; "closed" is a special keyword to indicate
+                                    ;; the open/closed status of an issue.
+                                    (delete "closed" all-keywords)
+                                    (not (member "closed" all-keywords))
+                                    (hashtable-ref file-details 'tasks 0)
+                                    (hashtable-ref file-details 'completed-tasks 0)
+                                    (map (lambda (commit author)
+                                           (post author (commit-date commit)))
+                                         commits
+                                         commit-authors))))
+                         (%issue-files))
+             (lambda (issue1 issue2)
+               (time<? (date->time-monotonic (issue-created-date issue1))
+                       (date->time-monotonic (issue-created-date issue2)))))))))
