@@ -38,6 +38,7 @@
   #:use-module ((bytestructures guile) #:prefix bs:)
   #:use-module (tissue utils)
   #:export (git-top-level
+            current-git-repository
             git-tracked-files))
 
 ;; We bind additional functions from libgit2 that are not already
@@ -169,6 +170,10 @@ repository."
       (error "No git top level found"))
      (else
       (loop (dirname curdir))))))
+
+(define (current-git-repository)
+  "Return the current git repository."
+  (repository-open (git-top-level)))
 
 (define (git-tracked-files)
   "Return a list of all files tracked in the current git repository. The
