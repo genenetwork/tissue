@@ -36,10 +36,8 @@
             issue-title
             issue-creator
             issue-created-date
-            issue-created-relative-date
             issue-last-updater
             issue-last-updated-date
-            issue-last-updated-relative-date
             issue-assigned
             issue-keywords
             issue-open?
@@ -49,7 +47,6 @@
             post
             post-author
             post-date
-            post-relative-date
             authors
             issues))
 
@@ -60,18 +57,15 @@
   (make-parameter #f))
 
 (define-record-type <issue>
-  (issue file title creator created-date created-relative-date
-         last-updater last-updated-date last-updated-relative-date
+  (issue file title creator created-date last-updater last-updated-date
          assigned keywords open tasks completed-tasks posts)
   issue?
   (file issue-file)
   (title issue-title)
   (creator issue-creator)
   (created-date issue-created-date)
-  (created-relative-date issue-created-relative-date)
   (last-updater issue-last-updater)
   (last-updated-date issue-last-updated-date)
-  (last-updated-relative-date issue-last-updated-relative-date)
   (assigned issue-assigned)
   (keywords issue-keywords)
   (open issue-open?)
@@ -81,11 +75,10 @@
   (posts issue-posts))
 
 (define-record-type <post>
-  (post author date relative-date)
+  (post author date)
   post?
   (author post-author)
-  (date post-date)
-  (relative-date post-relative-date))
+  (date post-date))
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
@@ -244,22 +237,18 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                             (let* ((alist (call-with-input-string line read))
                                    (author (resolve-alias (assq-ref alist 'author)
                                                           (%aliases)))
-                                   (date (assq-ref alist 'author-date))
-                                   (relative-date (assq-ref alist 'author-relative-date)))
+                                   (date (assq-ref alist 'author-date)))
                               (when (zero? index)
                                 (hashtable-set! result 'last-updater author)
-                                (hashtable-set! result 'last-updated-date (unix-time->date date))
-                                (hashtable-set! result 'last-updated-relative-date relative-date))
+                                (hashtable-set! result 'last-updated-date (unix-time->date date)))
                               (hashtable-set! result 'creator author)
                               (hashtable-set! result 'created-date (unix-time->date date))
-                              (hashtable-set! result 'created-relative-date relative-date)
-                              (post author date relative-date))))))
+                              (post author date))))))
           rcons get-line port))))
      "git" "log" "--follow"
      (string-append "--format=format:("
                     "(author . \"%an\")"
                     "(author-date . %at)"
-                    "(author-relative-date . \"%ar\")"
                     ")")
      "--" file)
     result))
@@ -284,10 +273,8 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                                     (if (string-any char-set:letter title) title file))
                                   (hashtable-ref file-details 'creator #f)
                                   (hashtable-ref file-details 'created-date #f)
-                                  (hashtable-ref file-details 'created-relative-date #f)
                                   (hashtable-ref file-details 'last-updater #f)
                                   (hashtable-ref file-details 'last-updated-date #f)
-                                  (hashtable-ref file-details 'last-updated-relative-date #f)
                                   (hashtable-ref file-details 'assigned '())
                                   ;; "closed" is a special keyword to indicate
                                   ;; the open/closed status of an issue.
