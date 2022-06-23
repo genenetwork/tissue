@@ -21,6 +21,7 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-28)
   #:use-module (srfi srfi-171)
@@ -82,8 +83,8 @@ NEW-EXTENSION."
 (define-markup (issue-list-item #:rest opts
 		                #:key (ident #f) (class "issue-list-item")
                                 (file #f) (title #f)
-                                (creator #f) (created-date #f) (created-relative-date #f)
-                                (last-updater #f) (last-updated-date #f) (last-updated-relative-date #f)
+                                (creator #f) (created-date #f)
+                                (last-updater #f) (last-updated-date #f)
                                 (assigned #f) (keywords #f) (open #f)
                                 (tasks #f) (completed-tasks #f)
                                 (posts #f))
@@ -93,8 +94,8 @@ NEW-EXTENSION."
        (class class)
        (loc &invocation-location)
        (required-options '(#:file #:title
-                           #:creator #:created-date #:created-relative-date
-                           #:last-updater #:last-updated-date #:last-updated-relative-date
+                           #:creator #:created-date
+                           #:last-updater #:last-updated-date
                            #:assigned #:keywords #:open
                            #:tasks #:completed-tasks
                            #:posts))
@@ -102,10 +103,8 @@ NEW-EXTENSION."
                   (#:title ,title)
 		  (#:creator ,creator)
                   (#:created-date ,created-date)
-                  (#:created-relative-date ,created-relative-date)
                   (#:last-updater ,last-updater)
                   (#:last-updated-date ,last-updated-date)
-                  (#:last-updated-relative-date ,last-updated-relative-date)
                   (#:assigned ,assigned)
                   (#:keywords ,keywords)
                   (#:open ,open)
@@ -114,8 +113,8 @@ NEW-EXTENSION."
                   (#:posts ,posts)
 		  ,@(the-options opts #:ident #:class
                                  #:file #:title
-                                 #:creator #:created-date #:created-relative-date
-                                 #:last-updater #:last-updated-date #:last-updated-relative-date
+                                 #:creator #:created-date
+                                 #:last-updater #:last-updated-date
                                  #:assigned #:keywords #:open
                                  #:tasks #:completed-tasks
                                  #:posts)))
@@ -171,12 +170,14 @@ NEW-EXTENSION."
         (span (@ (class "issue-list-item-metadata"))
               ,(string-append
                 (format " opened ~a by ~a"
-                        (markup-option markup #:created-relative-date)
+                        (date->string (markup-option markup #:created-date)
+                                      "~b ~d ~Y")
                         (markup-option markup #:creator))
                 (if (> (length (markup-option markup #:posts))
                        1)
                     (format ", last updated ~a by ~a"
-                            (markup-option markup #:last-updated-relative-date)
+                            (date->string (markup-option markup #:last-updated-date)
+                                          "~b ~d ~Y")
                             (markup-option markup #:last-updater))
                     "")
                 (if (zero? (markup-option markup #:tasks))
@@ -188,8 +189,8 @@ NEW-EXTENSION."
 (markup-writer 'issue-list-item
                (find-engine 'html)
                #:options '(#:file #:title
-                           #:creator #:created-date #:created-relative-date
-                           #:last-updater #:last-updated-date #:last-updated-relative-date
+                           #:creator #:created-date
+                           #:last-updater #:last-updated-date
                            #:assigned #:keywords #:open
                            #:tasks #:completed-tasks
                            #:posts)
@@ -203,10 +204,8 @@ default, all issues are listed newest first."
                                    #:title (issue-title issue)
                                    #:creator (issue-creator issue)
                                    #:created-date (issue-created-date issue)
-                                   #:created-relative-date (issue-created-relative-date issue)
                                    #:last-updater (issue-last-updater issue)
                                    #:last-updated-date (issue-last-updated-date issue)
-                                   #:last-updated-relative-date (issue-last-updated-relative-date issue)
                                    #:assigned (issue-assigned issue)
                                    #:keywords (issue-keywords issue)
                                    #:open (issue-open? issue)
