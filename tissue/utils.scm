@@ -21,7 +21,6 @@
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
   #:export (call-with-current-directory
-            call-with-input-pipe
             get-line-dos-or-unix
             memoize-thunk))
 
@@ -32,19 +31,6 @@ directory after THUNK returns."
     (dynamic-wind (cut chdir curdir)
                   thunk
                   (cut chdir original-current-directory))))
-
-(define (call-with-input-pipe proc program . args)
-  "Execute PROGRAM ARGS ... in a subprocess with a pipe to it. Call
-PROC with an input port to that pipe. Close the pipe once PROC exits,
-even if it exits non-locally. Return the value returned by PROC."
-  (let ((port #f))
-    (dynamic-wind (lambda () (set! port (apply open-pipe* OPEN_READ program args)))
-                  (cut proc port)
-                  (lambda ()
-                    (let ((return-value (status:exit-val (close-pipe port))))
-                      (unless (and return-value
-                                   (zero? return-value))
-                        (error "Invocation of program failed" (cons program args))))))))
 
 (define (get-line-dos-or-unix port)
   "Read line from PORT. This differs from `get-line' in (rnrs io
