@@ -176,14 +176,20 @@ Search issues using SEARCH-QUERY.
      (call-with-database %xapian-index
        (lambda (db)
          (let* ((stemmer (make-stem "en"))
-                (query-string (string-join args))
                 (query (parse-query
-                        ;; If issue state is not mentioned in query,
-                        ;; assume is:open.
-                        (cond
-                         ((string-null? query-string) "is:open")
-                         ((string-contains-ci query-string "is:") query-string)
-                         (else (format #f "is:open AND (~a)" query-string)))
+                        ;; When query does not mention type or state,
+                        ;; assume is:open. Assuming is:open is
+                        ;; implicitly assuming type:issue since only
+                        ;; issues can have is:open.
+                        (if (every string-null? args)
+                            "is:open"
+                            (string-join (if (any (lambda (query-string)
+                                                    (or (string-contains-ci query-string "type:")
+                                                        (string-contains-ci query-string "is:")))
+                                                  args)
+                                             args
+                                             (cons "is:open" args))
+                                         " AND "))
                         #:stemmer stemmer
                         #:prefixes '(("type" . "XT")
                                      ("title" . "S")
