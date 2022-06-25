@@ -219,6 +219,54 @@ List issues.
                                rcount
                                (issues)))))))
 
+(define tissue-search
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a search SEARCH-QUERY
+Search issues using SEARCH-QUERY.
+
+"))
+    (args
+     (call-with-database %xapian-index
+       (lambda (db)
+         (let* ((stemmer (make-stem "en"))
+                (query-string (string-join args))
+                (query (parse-query
+                        ;; If issue state is not mentioned in query,
+                        ;; assume is:open.
+                        (if (string-contains-ci query-string "is:")
+                            query-string
+                            (format #f "is:open AND (~a)" query-string))
+                        #:stemmer stemmer
+                        #:prefixes '(("title" . "S")
+                                     ("creator" . "A")
+                                     ("last-updater" . "XA")
+                                     ("updater" . "XA")
+                                     ("assigned" . "XI")
+                                     ("keyword" . "K")
+                                     ("tag" . "K")
+                                     ("is" . "XS")))))
+           (format #t "total ~a~%"
+                   (mset-fold (lambda (item count)
+                                (let ((issue (call-with-input-string (document-data (mset-item-document item))
+                                               (compose alist->issue read))))
+                                  (print-issue issue)
+                                  (let ((snippet (mset-snippet (MSetIterator-mset-get item)
+                                                               (call-with-input-file (issue-file issue)
+                                                                 get-string-all)
+                                                               #:length 200
+                                                               #:highlight-start (color 'BOLD 'ON-RED)
+                                                               #:highlight-end (color 'RESET)
+                                                               #:stemmer stemmer)))
+                                    (unless (string-null? snippet)
+                                      (display snippet)
+                                      (newline)
+                                      (newline)))
+                                  (1+ count)))
+                              0
+                              (enquire-mset (enquire db query)
+                                            #:maximum-items (database-document-count db))))))))))
+
 (define tissue-show
   (match-lambda*
     (("--help")
@@ -326,6 +374,7 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 
 COMMAND must be one of the sub-commands listed below:
 
+  search    search issues
   list      list issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
@@ -386,6 +435,7 @@ top-level of the git repository."
                        (WritableDatabase-set-metadata db "commit" current-head))))))
              ;; Handle sub-command.
              (apply (match command
+                      ("search" tissue-search)
                       ("list" tissue-list)
                       ("show" tissue-show)
                       ("repl" tissue-repl)
