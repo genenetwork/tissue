@@ -100,7 +100,8 @@
 (define (issue->alist issue)
   "Convert ISSUE, a <issue> object, to an association list that can be
 serialized."
-  `((file . ,(issue-file issue))
+  `((type . issue)
+    (file . ,(issue-file issue))
     (title . ,(issue-title issue))
     (creator . ,(issue-creator issue))
     (created-date . ,(date->iso-8601 (issue-created-date issue)))
@@ -349,6 +350,7 @@ with PREFIX."
          (term-generator (make-term-generator #:stem (make-stem "en")
                                               #:document doc)))
     ;; Index metadata with various prefixes.
+    (index-text! term-generator "issue" #:prefix "XT")
     (index-text! term-generator (issue-title issue) #:prefix "S")
     (index-person term-generator (issue-creator issue) "A")
     (index-person term-generator (issue-last-updater issue) "XA")
