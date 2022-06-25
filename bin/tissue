@@ -28,16 +28,26 @@ exec guile --no-auto-compile -s "$0" "$@"
         (srfi srfi-37)
         (srfi srfi-171)
         (srfi srfi-171 gnu)
+        (ice-9 ftw)
         (ice-9 match)
         (ice-9 popen)
         (ice-9 regex)
         (term ansi-color)
+        (git)
+        (xapian wrap)
+        (xapian xapian)
         (tissue conditions)
         (tissue git)
         (tissue issue)
         (tissue tissue)
         (tissue utils)
         (tissue web))
+
+(define %state-directory
+  ".tissue")
+
+(define %xapian-index
+  (string-append %state-directory "/xapian"))
 
 (define (invoke program . args)
   (unless (zero? (apply system* program args))
@@ -328,6 +338,16 @@ To get usage information for one of these sub-commands, run
           (command-line-program)
           (command-line-program)))
 
+(define (delete-xapian-index)
+  "Delete xapian index if it exists. Current directory must be at the
+top-level of the git repository."
+  (when (file-exists? %xapian-index)
+    (for-each (lambda (file)
+                (delete-file (string-append %xapian-index "/" file)))
+              (scandir %xapian-index
+                       (negate (cut member <> (list "." "..")))))
+    (rmdir %xapian-index)))
+
 (define main
   (match-lambda*
     ((_ (or "-h" "--help"))
@@ -343,6 +363,28 @@ To get usage information for one of these sub-commands, run
          (lambda ()
            (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
                           (%aliases (tissue-configuration-aliases (load-config))))
+             ;; Create hidden tissue directory unless it exists.
+             (unless (file-exists? %state-directory)
+               (mkdir %state-directory))
+             ;; Ensure index exists rebuilding it if it is stale.
+             (let ((current-head
+                    (oid->string (reference-name->oid
+                                  (current-git-repository) "HEAD"))))
+               (unless (and (file-exists? %xapian-index)
+                            (string=? (call-with-database %xapian-index
+                                        (cut Database-get-metadata <> "commit"))
+                                      current-head))
+                 (guard (c (else (delete-xapian-index)
+                                 (display "Building xapian index failed."
+                                          (current-error-port))
+                                 (raise c)))
+                   (delete-xapian-index)
+                   (call-with-writable-database %xapian-index
+                     (lambda (db)
+                       (for-each (cut index-issue db <>)
+                                 (issues))
+                       (WritableDatabase-set-metadata db "commit" current-head))))))
+             ;; Handle sub-command.
              (apply (match command
                       ("list" tissue-list)
                       ("show" tissue-show)

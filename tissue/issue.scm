@@ -28,6 +28,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
   #:use-module (git)
+  #:use-module (xapian xapian)
   #:use-module (tissue git)
   #:use-module (tissue utils)
   #:export (%issue-files
@@ -53,7 +54,8 @@
             post->alist
             alist->post
             authors
-            issues))
+            issues
+            index-issue))
 
 (define %issue-files
   (make-parameter #f))
@@ -326,3 +328,36 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
              (lambda (issue1 issue2)
                (time<? (date->time-monotonic (issue-created-date issue1))
                        (date->time-monotonic (issue-created-date issue2)))))))))
+
+(define (index-person term-generator name prefix)
+  "Index all aliases of person of canonical NAME using TERM-GENERATOR
+with PREFIX."
+  (for-each (cut index-text! term-generator <> #:prefix prefix)
+            (or (assoc name (%aliases))
+                (list))))
+
+(define (index-issue db issue)
+  "Index ISSUE in writable xapian DB."
+  (let* ((idterm (string-append "Q" (issue-file issue)))
+         (body (call-with-input-file (issue-file issue)
+                 get-string-all))
+         (doc (make-document #:data (call-with-output-string
+                                      (cut write (issue->alist issue) <>))
+                             #:terms `((,idterm . 0))))
+         (term-generator (make-term-generator #:stem (make-stem "en")
+                                              #:document doc)))
+    ;; Index metadata with various prefixes.
+    (index-text! term-generator (issue-title issue) #:prefix "S")
+    (index-person term-generator (issue-creator issue) "A")
+    (index-person term-generator (issue-last-updater issue) "XA")
+    (for-each (cut index-person term-generator <> "XI")
+              (issue-assigned issue))
+    (for-each (cut index-text! term-generator <> #:prefix "K")
+              (issue-keywords issue))
+    (index-text! term-generator
+                 (if (issue-open? issue) "open" "closed")
+                 #:prefix "XS")
+    ;; Index body without prefixes for free text search.
+    (index-text! term-generator body)
+    ;; Add document to database.
+    (replace-document! db idterm doc)))
