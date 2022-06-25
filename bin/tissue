@@ -95,8 +95,6 @@ to run tissue."
   "Print ISSUE."
   (let ((number-of-posts (length (issue-posts issue))))
     (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
-    ;; Highlight keywords containing "bug" or "critical" as whole
-    ;; words in red. Else, highlight in blue.
     (unless (null? (issue-keywords issue))
       (display " ")
       (display (string-join (map (cut colorize-string <> 'ON-BLUE)
