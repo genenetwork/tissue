@@ -164,47 +164,6 @@ to run tissue."
     (newline)
     (newline)))
 
-(define tissue-list
-  (match-lambda*
-    (("--help")
-     (format #t "Usage: ~a list [OPTIONS]
-List issues.
-
-  --assigned=ASSIGNED    only list issues assigned to ASSIGNED
-  --format=FORMAT        output in FORMAT (either text or gemtext, and text by default)
-
-"
-             (command-line-program)))
-    (args
-     (let ((args (args-fold args
-                            (list (option (list "assigned") #t #f
-                                          (lambda (opt name arg loads)
-                                            (acons 'assigned arg loads)))
-                                  (option (list "format") #t #f
-                                          (lambda (opt name arg loads)
-                                            (acons 'format
-                                                   (cond
-                                                    ((string=? arg "text") 'text)
-                                                    ((string=? arg "gemtext") 'gemtext)
-                                                    (else (error "Unknown format" arg)))
-                                                   loads))))
-                            invalid-option
-                            invalid-operand
-                            '((format . text)))))
-       (format #t "total ~a~%"
-               (list-transduce (compose (tfilter (lambda (issue)
-                                                   (and (issue-open? issue)
-                                                        (or (not (assq 'assigned args))
-                                                            (member (assq-ref args 'assigned)
-                                                                    (issue-assigned issue))))))
-                                        (tlog (match-lambda*
-                                                ((_ issue)
-                                                 ((case (assq-ref args 'format)
-                                                    ((text) print-issue)
-                                                    ((gemtext) print-issue-to-gemtext))
-                                                  issue)))))
-                               rcount
-                               (issues)))))))
 
 (define tissue-search
   (match-lambda*
@@ -363,7 +322,6 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 COMMAND must be one of the sub-commands listed below:
 
   search    search issues
-  list      list issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
   web       export repository as website
@@ -424,7 +382,6 @@ top-level of the git repository."
              ;; Handle sub-command.
              (apply (match command
                       ("search" tissue-search)
-                      ("list" tissue-list)
                       ("show" tissue-show)
                       ("repl" tissue-repl)
                       ("web" tissue-web)
@@ -434,8 +391,8 @@ top-level of the git repository."
                        (print-usage)
                        (exit #f)))
                     args))))))
-    ;; tissue is an alias for `tissue list'
+    ;; tissue is an alias for `tissue search'
     ((_)
-     (main "tissue" "list"))))
+     (main "tissue" "search"))))
 
 (apply main (command-line))
