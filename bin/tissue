@@ -84,7 +84,7 @@ to run tissue."
 (define (print-issue issue-number issue)
   "Print ISSUE with number ISSUE-NUMBER."
   (let ((number-of-posts (length (issue-posts issue))))
-    (display (colorize-string (issue-title issue) 'MAGENTA))
+    (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
     ;; Highlight keywords containing "bug" or "critical" as whole
     ;; words in red. Else, highlight in blue.
     (unless (null? (issue-keywords issue))
