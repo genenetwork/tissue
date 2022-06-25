@@ -210,26 +210,6 @@ List issues.
                                rcount
                                (issues)))))))
 
-(define tissue-edit
-  (match-lambda*
-    (("--help")
-     (format #t "Usage: ~a edit ISSUE-NUMBER
-Start $EDITOR to edit issue #ISSUE-NUMBER.
-
-"
-             (command-line-program)))
-    ((issue-number)
-     (unless (getenv "EDITOR")
-       (error "Please set the EDITOR environment variable to your favorite editor. For example,
-export EDITOR=emacsclient"))
-     (let ((issue-file (issue-file (list-ref (issues)
-                                             (1- (string->number issue-number))))))
-       ;; Files may be renamed or deleted, but not
-       ;; committed. Therefore, only read the file if it exists.
-       (if (file-exists? issue-file)
-           (invoke (getenv "EDITOR") issue-file)
-           (raise (issue-file-not-found-error issue-file)))))))
-
 (define tissue-show
   (match-lambda*
     (("--help")
@@ -338,7 +318,6 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 COMMAND must be one of the sub-commands listed below:
 
   list      list issues
-  edit      edit an issue
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
   web       export repository as website
@@ -367,7 +346,6 @@ To get usage information for one of these sub-commands, run
                           (%aliases (tissue-configuration-aliases (load-config))))
              (apply (match command
                       ("list" tissue-list)
-                      ("edit" tissue-edit)
                       ("show" tissue-show)
                       ("repl" tissue-repl)
                       ("web" tissue-web)
