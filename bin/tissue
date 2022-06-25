@@ -223,9 +223,10 @@ Search issues using SEARCH-QUERY.
                 (query (parse-query
                         ;; If issue state is not mentioned in query,
                         ;; assume is:open.
-                        (if (string-contains-ci query-string "is:")
-                            query-string
-                            (format #f "is:open AND (~a)" query-string))
+                        (cond
+                         ((string-null? query-string) "is:open")
+                         ((string-contains-ci query-string "is:") query-string)
+                         (else (format #f "is:open AND (~a)" query-string)))
                         #:stemmer stemmer
                         #:prefixes '(("title" . "S")
                                      ("creator" . "A")
