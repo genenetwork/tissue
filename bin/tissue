@@ -81,8 +81,8 @@ to run tissue."
   (match (command-line)
     ((program _ ...) program)))
 
-(define (print-issue issue-number issue)
-  "Print ISSUE with number ISSUE-NUMBER."
+(define (print-issue issue)
+  "Print ISSUE."
   (let ((number-of-posts (length (issue-posts issue))))
     (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
     ;; Highlight keywords containing "bug" or "critical" as whole
@@ -115,8 +115,7 @@ to run tissue."
                               " posts]")))
     (newline)
     (display (string-append
-              (colorize-string (string-append "#" (number->string issue-number)) 'CYAN)
-              " opened "
+              "opened "
               (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
               " by "
               (colorize-string (issue-creator issue) 'CYAN)))
@@ -136,8 +135,8 @@ to run tissue."
                               " tasks done")))
     (newline)))
 
-(define (print-issue-to-gemtext issue-number issue)
-  "Print ISSUE with number ISSUE-NUMBER to gemtext."
+(define (print-issue-to-gemtext issue)
+  "Print ISSUE to gemtext."
   (let ((number-of-posts (length (issue-posts issue))))
     (format #t "# ~a" (issue-title issue))
     (unless (null? (issue-keywords issue))
@@ -151,8 +150,7 @@ to run tissue."
     (when (> number-of-posts 1)
       (format #t " [~a posts]" number-of-posts))
     (newline)
-    (format #t "~a opened ~a by ~a"
-            issue-number
+    (format #t "opened ~a by ~a"
             (human-date-string (issue-created-date issue))
             (issue-creator issue))
     (when (> number-of-posts 1)
@@ -194,19 +192,17 @@ List issues.
                             invalid-operand
                             '((format . text)))))
        (format #t "~%total ~a~%"
-               (list-transduce (compose (tenumerate 1)
-                                        (tfilter (match-lambda
-                                                   ((_ . issue)
-                                                    (and (issue-open? issue)
-                                                         (or (not (assq 'assigned args))
-                                                             (member (assq-ref args 'assigned)
-                                                                     (issue-assigned issue)))))))
+               (list-transduce (compose (tfilter (lambda (issue)
+                                                   (and (issue-open? issue)
+                                                        (or (not (assq 'assigned args))
+                                                            (member (assq-ref args 'assigned)
+                                                                    (issue-assigned issue))))))
                                         (tlog (match-lambda*
-                                                ((_ (index . issue))
+                                                ((_ issue)
                                                  ((case (assq-ref args 'format)
                                                     ((text) print-issue)
                                                     ((gemtext) print-issue-to-gemtext))
-                                                  index issue)))))
+                                                  issue)))))
                                rcount
                                (issues)))))))
 
