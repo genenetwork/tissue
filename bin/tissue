@@ -185,7 +185,8 @@ Search issues using SEARCH-QUERY.
                          ((string-contains-ci query-string "is:") query-string)
                          (else (format #f "is:open AND (~a)" query-string)))
                         #:stemmer stemmer
-                        #:prefixes '(("title" . "S")
+                        #:prefixes '(("type" . "XT")
+                                     ("title" . "S")
                                      ("creator" . "A")
                                      ("last-updater" . "XA")
                                      ("updater" . "XA")
