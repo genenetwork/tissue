@@ -99,20 +99,9 @@ to run tissue."
     ;; words in red. Else, highlight in blue.
     (unless (null? (issue-keywords issue))
       (display " ")
-      (display (string-join
-                (map (lambda (keyword)
-                       ((cut colorize-string
-                             <>
-                             (cond
-                              ((not (null? (lset-intersection
-                                            string=?
-                                            (string-split keyword #\space)
-                                            (list "bug" "critical"))))
-                               'ON-RED)
-                              (else 'ON-BLUE)))
-                        (string-append " " keyword " ")))
-                     (issue-keywords issue))
-                " ")))
+      (display (string-join (map (cut colorize-string <> 'ON-BLUE)
+                                 (issue-keywords issue))
+                            " ")))
     (unless (null? (issue-assigned issue))
       (display (colorize-string (string-append " (assigned: "
                                                (string-join (issue-assigned issue)
