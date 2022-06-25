@@ -34,6 +34,7 @@
   #:export (%issue-files
             %aliases
             issue
+            issue?
             issue-file
             issue-title
             issue-creator
@@ -47,6 +48,7 @@
             issue-completed-tasks
             issue-posts
             post
+            post?
             post-author
             post-date
             issue->alist
