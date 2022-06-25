@@ -114,6 +114,8 @@ to run tissue."
                               (number->string number-of-posts)
                               " posts]")))
     (newline)
+    (display (colorize-string (issue-file issue) 'YELLOW))
+    (newline)
     (display (string-append
               "opened "
               (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
@@ -133,6 +135,7 @@ to run tissue."
                               "/"
                               (number->string (issue-tasks issue))
                               " tasks done")))
+    (newline)
     (newline)))
 
 (define (print-issue-to-gemtext issue)
@@ -191,7 +194,7 @@ List issues.
                             invalid-option
                             invalid-operand
                             '((format . text)))))
-       (format #t "~%total ~a~%"
+       (format #t "total ~a~%"
                (list-transduce (compose (tfilter (lambda (issue)
                                                    (and (issue-open? issue)
                                                         (or (not (assq 'assigned args))
