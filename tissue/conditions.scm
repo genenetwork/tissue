@@ -20,8 +20,15 @@
   #:use-module (rnrs conditions)
   #:export (issue-file-not-found-error
             issue-file-not-found-error?
-            issue-file-not-found-error-issue-file))
+            issue-file-not-found-error-issue-file
+            unknown-document-type-violation
+            unknown-document-type-violation?
+            unknown-document-type-violation-document))
 
 (define-condition-type &issue-file-not-found-error &error
   issue-file-not-found-error issue-file-not-found-error?
   (issue-file issue-file-not-found-error-issue-file))
+
+(define-condition-type &unknown-document-type-violation &violation
+  unknown-document-type-violation unknown-document-type-violation?
+  (document unknown-document-type-violation-document))
