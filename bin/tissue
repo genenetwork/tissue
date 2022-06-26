@@ -93,14 +93,6 @@ to run tissue."
   (match (command-line)
     ((program _ ...) program)))
 
-(define (print-document document)
-  "Print DOCUMENT, an <issue> or <document> object."
-  ((cond
-    ((issue? document) print-issue)
-    ((doc:document? document) doc:print-document)
-    (else (raise (unknown-document-type-violation document))))
-   document))
-
 (define (print-issue issue)
   "Print ISSUE."
   (let ((number-of-posts (length (issue-posts issue))))
@@ -173,6 +165,14 @@ to run tissue."
               (issue-tasks issue)))
     (newline)
     (newline)))
+
+(define (print-document document)
+  "Print DOCUMENT, an <issue> or <document> object."
+  ((cond
+    ((issue? document) print-issue)
+    ((doc:document? document) doc:print-document)
+    (else (raise (unknown-document-type-violation document))))
+   document))
 
 (define (alist->document alist)
   "Convert ALIST to an <issue> or <document> object."
@@ -396,8 +396,7 @@ DB."
                 (exit #f)))
        (call-with-current-directory (git-top-level)
          (lambda ()
-           (parameterize ((%issue-files (tissue-configuration-issue-files (load-config)))
-                          (%aliases (tissue-configuration-aliases (load-config))))
+           (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
              ;; Create hidden tissue directory unless it exists.
              (unless (file-exists? %state-directory)
                (mkdir %state-directory))

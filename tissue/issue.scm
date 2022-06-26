@@ -31,8 +31,7 @@
   #:use-module (xapian xapian)
   #:use-module (tissue git)
   #:use-module (tissue utils)
-  #:export (%issue-files
-            %aliases
+  #:export (%aliases
             issue
             issue?
             issue-file
@@ -56,10 +55,8 @@
             post->alist
             alist->post
             issues
+            read-gemtext-issue
             index-issue))
-
-(define %issue-files
-  (make-parameter #f))
 
 (define %aliases
   (make-parameter #f))
@@ -276,49 +273,43 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                           port))))
     result))
 
-(define issues
+(define file-modification-table-for-current-repository
   (memoize-thunk
-   (lambda ()
-     "Return a list of all issues, sorted oldest first."
-     ;; Get all gemini files except README.gmi and hidden files. Text
-     ;; editors tend to create hidden files while editing, and we want to
-     ;; avoid them.
-     (let ((file-modification-table (file-modification-table (current-git-repository))))
-       (sort (filter-map (lambda (file)
-                           (let* ((file-details (file-details file))
-                                  ;; Downcase keywords to make them
-                                  ;; case-insensitive.
-                                  (all-keywords (map string-downcase
-                                                     (hashtable-ref file-details 'keywords '())))
-                                  (commits (hashtable-ref file-modification-table file #f))
-                                  (commit-authors (map (lambda (commit)
-                                                         (resolve-alias (signature-name (commit-author commit))
-                                                                        (%aliases)))
-                                                       commits)))
-                             (issue file
-                                    ;; Fallback to filename if title has no alphabetic
-                                    ;; characters.
-                                    (let ((title (hashtable-ref file-details 'title "")))
-                                      (if (string-any char-set:letter title) title file))
-                                    (first commit-authors)
-                                    (commit-date (first commits))
-                                    (last commit-authors)
-                                    (commit-date (last commits))
-                                    (hashtable-ref file-details 'assigned '())
-                                    ;; "closed" is a special keyword to indicate
-                                    ;; the open/closed status of an issue.
-                                    (delete "closed" all-keywords)
-                                    (not (member "closed" all-keywords))
-                                    (hashtable-ref file-details 'tasks 0)
-                                    (hashtable-ref file-details 'completed-tasks 0)
-                                    (map (lambda (commit author)
-                                           (post author (commit-date commit)))
-                                         commits
-                                         commit-authors))))
-                         (%issue-files))
-             (lambda (issue1 issue2)
-               (time<? (date->time-monotonic (issue-created-date issue1))
-                       (date->time-monotonic (issue-created-date issue2)))))))))
+   (cut file-modification-table (current-git-repository))))
+
+(define (read-gemtext-issue file)
+  "Read issue from gemtext FILE. Return an <issue> object."
+  (let* ((file-details (file-details file))
+         ;; Downcase keywords to make them
+         ;; case-insensitive.
+         (all-keywords (map string-downcase
+                            (hashtable-ref file-details 'keywords '())))
+         (commits (hashtable-ref (file-modification-table-for-current-repository)
+                                 file #f))
+         (commit-authors (map (lambda (commit)
+                                (resolve-alias (signature-name (commit-author commit))
+                                               (%aliases)))
+                              commits)))
+    (issue file
+           ;; Fallback to filename if title has no alphabetic
+           ;; characters.
+           (let ((title (hashtable-ref file-details 'title "")))
+             (if (string-any char-set:letter title) title file))
+           (first commit-authors)
+           (commit-date (first commits))
+           (last commit-authors)
+           (commit-date (last commits))
+           (hashtable-ref file-details 'assigned '())
+           ;; "closed" is a special keyword to indicate
+           ;; the open/closed status of an issue.
+           (delete "closed" all-keywords)
+           (not (member "closed" all-keywords))
+           (hashtable-ref file-details 'tasks 0)
+           (hashtable-ref file-details 'completed-tasks 0)
+           (map (lambda (commit author)
+                  (post author (commit-date commit)))
+                commits
+                commit-authors))))
 
 (define (index-person term-generator name prefix)
   "Index all aliases of person of canonical NAME using TERM-GENERATOR
