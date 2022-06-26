@@ -23,6 +23,7 @@ exec guile --no-auto-compile -s "$0" "$@"
 (import (rnrs exceptions)
         (rnrs io ports)
         (srfi srfi-1)
+        (srfi srfi-9)
         (srfi srfi-19)
         (srfi srfi-26)
         (srfi srfi-37)
@@ -48,6 +49,16 @@ exec guile --no-auto-compile -s "$0" "$@"
 
 (define %xapian-index
   (string-append %state-directory "/xapian"))
+
+(define-record-type <indexed-document>
+  (indexed-document reader web-uri)
+  indexed-document?
+  ;; A thunk that returns a document object (currently either an
+  ;; <issue> or a <document> object), presumably by reading it from a
+  ;; file or other source
+  (reader indexed-document-reader)
+  ;; A string URI linking to this document on the web
+  (web-uri indexed-document-web-uri))
 
 (define (invoke program . args)
   (unless (zero? (apply system* program args))
