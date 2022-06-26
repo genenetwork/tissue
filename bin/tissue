@@ -60,12 +60,6 @@ exec guile --no-auto-compile -s "$0" "$@"
   ;; A string URI linking to this document on the web
   (web-uri indexed-document-web-uri))
 
-(define rlast
-  (case-lambda
-    (() #f)
-    ((result) result)
-    ((result input) input)))
-
 (define (human-date-string date)
   "Return a human readable rendering of DATE."
   (let ((elapsed-time
