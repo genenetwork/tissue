@@ -194,7 +194,7 @@ repository."
               (commit-time commit))
    (* 60 (commit-time-offset commit))))
 
-(define (git-tracked-files repository)
+(define* (git-tracked-files #:optional (repository (current-git-repository)))
   "Return a list of all files tracked in REPOSITORY. The returned
 filenames are relative to the top-level directory of REPOSITORY and do
 not have a leading slash."
