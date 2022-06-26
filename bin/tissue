@@ -38,6 +38,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (xapian wrap)
         (xapian xapian)
         (tissue conditions)
+        (prefix (tissue document) doc:)
         (tissue git)
         (tissue issue)
         (tissue tissue)
@@ -91,6 +92,14 @@ exec guile --no-auto-compile -s "$0" "$@"
 to run tissue."
   (match (command-line)
     ((program _ ...) program)))
+
+(define (print-document document)
+  "Print DOCUMENT, an <issue> or <document> object."
+  ((cond
+    ((issue? document) print-issue)
+    ((doc:document? document) doc:print-document)
+    (else (raise (unknown-document-type-violation document))))
+   document))
 
 (define (print-issue issue)
   "Print ISSUE."
@@ -165,6 +174,23 @@ to run tissue."
     (newline)
     (newline)))
 
+(define (alist->document alist)
+  "Convert ALIST to an <issue> or <document> object."
+  ((case (assq-ref alist 'type)
+     ((issue) alist->issue)
+     ((document) doc:alist->document)
+     (else (raise (unknown-document-type-violation alist))))
+   alist))
+
+(define (document->text document)
+  "Return the text of DOCUMENT, an <issue> or <document> object."
+  (call-with-input-file
+      ((cond
+        ((issue? document) issue-file)
+        ((doc:document? document) doc:document-file)
+        (else (raise (unknown-document-type-violation document))))
+       document)
+    get-string-all))
 
 (define tissue-search
   (match-lambda*
@@ -203,12 +229,11 @@ Search issues using SEARCH-QUERY.
                                      ("is" . "XS")))))
            (format #t "total ~a~%"
                    (mset-fold (lambda (item count)
-                                (let ((issue (call-with-input-string (document-data (mset-item-document item))
-                                               (compose alist->issue read))))
-                                  (print-issue issue)
+                                (let ((document (call-with-input-string (document-data (mset-item-document item))
+                                                  (compose alist->document read))))
+                                  (print-document document)
                                   (let ((snippet (mset-snippet (MSetIterator-mset-get item)
-                                                               (call-with-input-file (issue-file issue)
-                                                                 get-string-all)
+                                                               (document->text document)
                                                                #:length 200
                                                                #:highlight-start (color 'BOLD 'ON-RED)
                                                                #:highlight-end (color 'RESET)
@@ -349,6 +374,15 @@ top-level of the git repository."
                        (negate (cut member <> (list "." "..")))))
     (rmdir %xapian-index)))
 
+(define (index-document db document)
+  "Index DOCUMENT, an <issue> or <document> object, in writable xapian
+DB."
+  ((cond
+    ((issue? document) index-issue)
+    ((doc:document? document) doc:index-document)
+    (else (raise (unknown-document-type-violation document))))
+   db document))
+
 (define main
   (match-lambda*
     ((_ (or "-h" "--help"))
@@ -382,8 +416,9 @@ top-level of the git repository."
                    (delete-xapian-index)
                    (call-with-writable-database %xapian-index
                      (lambda (db)
-                       (for-each (cut index-issue db <>)
-                                 (issues))
+                       (for-each (lambda (indexed-document)
+                                   (index-document db ((indexed-document-reader indexed-document))))
+                                 (tissue-configuration-indexed-documents (load-config)))
                        (WritableDatabase-set-metadata db "commit" current-head))))))
              ;; Handle sub-command.
              (apply (match command
