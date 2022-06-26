@@ -29,7 +29,7 @@ libdir ?= $(exec_prefix)/lib
 datarootdir ?= $(prefix)/share
 
 top_level_module_dir = $(project)
-sources = $(wildcard $(top_level_module_dir)/*.scm)
+sources = $(wildcard $(top_level_module_dir)/*.scm) $(wildcard $(top_level_module_dir)/web/*.scm)
 objects = $(sources:.scm=.go)
 scripts = $(wildcard bin/*)
 

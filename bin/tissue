@@ -42,7 +42,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (tissue issue)
         (tissue tissue)
         (tissue utils)
-        (tissue web))
+        (tissue web static))
 
 (define %state-directory
   ".tissue")

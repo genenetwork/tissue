@@ -16,7 +16,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
-(define-module (tissue web)
+(define-module (tissue web static)
   #:use-module (rnrs exceptions)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
