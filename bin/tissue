@@ -24,7 +24,6 @@ exec guile --no-auto-compile -s "$0" "$@"
         (rnrs io ports)
         (srfi srfi-1)
         (srfi srfi-9)
-        (srfi srfi-19)
         (srfi srfi-26)
         (srfi srfi-37)
         (srfi srfi-171)
@@ -61,26 +60,6 @@ exec guile --no-auto-compile -s "$0" "$@"
   ;; A string URI linking to this document on the web
   (web-uri indexed-document-web-uri))
 
-(define (human-date-string date)
-  "Return a human readable rendering of DATE."
-  (let ((elapsed-time
-         (time-second
-          (time-difference (date->time-monotonic (current-date))
-                           (date->time-monotonic date)))))
-    (cond
-     ((< elapsed-time (* 2 60))
-      (format #f "~a seconds ago" elapsed-time))
-     ((< elapsed-time (* 2 60 60))
-      (format #f "~a minutes ago" (round (/ elapsed-time 60))))
-     ((< elapsed-time (* 2 24 60 60))
-      (format #f "~a hours ago" (round (/ elapsed-time 60 60))))
-     ((< elapsed-time (* 2 7 24 60 60))
-      (format #f "~a days ago" (round (/ elapsed-time 60 60 24))))
-     ((< elapsed-time (* 2 30 24 60 60))
-      (format #f "~a weeks ago" (round (/ elapsed-time 60 60 24 7))))
-     (else
-      (format #f "on ~a" (date->string date "~b ~d ~Y"))))))
-
 (define (invalid-option opt name arg loads)
   (error "Invalid option" name))
 
@@ -92,79 +71,6 @@ exec guile --no-auto-compile -s "$0" "$@"
 to run tissue."
   (match (command-line)
     ((program _ ...) program)))
-
-(define (print-issue issue)
-  "Print ISSUE."
-  (let ((number-of-posts (length (issue-posts issue))))
-    (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
-    (unless (null? (issue-keywords issue))
-      (display " ")
-      (display (string-join (map (cut colorize-string <> 'ON-BLUE)
-                                 (issue-keywords issue))
-                            " ")))
-    (unless (null? (issue-assigned issue))
-      (display (colorize-string (string-append " (assigned: "
-                                               (string-join (issue-assigned issue)
-                                                            ", ")
-                                               ")")
-                                'GREEN)))
-    (when (> number-of-posts 1)
-      (display (string-append " ["
-                              (number->string number-of-posts)
-                              " posts]")))
-    (newline)
-    (display (colorize-string (issue-file issue) 'YELLOW))
-    (newline)
-    (display (string-append
-              "opened "
-              (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
-              " by "
-              (colorize-string (issue-creator issue) 'CYAN)))
-    (when (> number-of-posts 1)
-      (display (string-append (colorize-string "," 'CYAN)
-                              " last updated "
-                              (colorize-string (human-date-string (issue-last-updated-date issue))
-                                               'CYAN)
-                              " by "
-                              (colorize-string (issue-last-updater issue)
-                                               'CYAN))))
-    (unless (zero? (issue-tasks issue))
-      (display (string-append (colorize-string "; " 'CYAN)
-                              (number->string (issue-completed-tasks issue))
-                              "/"
-                              (number->string (issue-tasks issue))
-                              " tasks done")))
-    (newline)
-    (newline)))
-
-(define (print-issue-to-gemtext issue)
-  "Print ISSUE to gemtext."
-  (let ((number-of-posts (length (issue-posts issue))))
-    (format #t "# ~a" (issue-title issue))
-    (unless (null? (issue-keywords issue))
-      (format #t " [~a]"
-              (string-join (issue-keywords issue)
-                           ", ")))
-    (unless (null? (issue-assigned issue))
-      (format #t " (assigned: ~a)"
-              (string-join (issue-assigned issue)
-                           ", ")))
-    (when (> number-of-posts 1)
-      (format #t " [~a posts]" number-of-posts))
-    (newline)
-    (format #t "opened ~a by ~a"
-            (human-date-string (issue-created-date issue))
-            (issue-creator issue))
-    (when (> number-of-posts 1)
-      (format #t ", last updated ~a by ~a"
-              (human-date-string (issue-last-updated-date issue))
-              (issue-last-updater issue)))
-    (unless (zero? (issue-tasks issue))
-      (format #t "; ~a/~a tasks done"
-              (issue-completed-tasks issue)
-              (issue-tasks issue)))
-    (newline)
-    (newline)))
 
 (define (print-document document)
   "Print DOCUMENT, an <issue> or <document> object."

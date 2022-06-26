@@ -27,6 +27,7 @@
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
+  #:use-module (term ansi-color)
   #:use-module (git)
   #:use-module (xapian xapian)
   #:use-module (tissue git)
@@ -54,6 +55,8 @@
             alist->issue
             post->alist
             alist->post
+            print-issue
+            print-issue-to-gemtext
             issues
             read-gemtext-issue
             index-issue))
@@ -136,6 +139,79 @@ serialized."
   "Convert ALIST to a <post> object."
   (post (assq-ref alist 'author)
         (iso-8601->date (assq-ref alist 'date))))
+
+(define (print-issue issue)
+  "Print ISSUE, an <issue> object, in search results."
+  (let ((number-of-posts (length (issue-posts issue))))
+    (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
+    (unless (null? (issue-keywords issue))
+      (display " ")
+      (display (string-join (map (cut colorize-string <> 'ON-BLUE)
+                                 (issue-keywords issue))
+                            " ")))
+    (unless (null? (issue-assigned issue))
+      (display (colorize-string (string-append " (assigned: "
+                                               (string-join (issue-assigned issue)
+                                                            ", ")
+                                               ")")
+                                'GREEN)))
+    (when (> number-of-posts 1)
+      (display (string-append " ["
+                              (number->string number-of-posts)
+                              " posts]")))
+    (newline)
+    (display (colorize-string (issue-file issue) 'YELLOW))
+    (newline)
+    (display (string-append
+              "opened "
+              (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
+              " by "
+              (colorize-string (issue-creator issue) 'CYAN)))
+    (when (> number-of-posts 1)
+      (display (string-append (colorize-string "," 'CYAN)
+                              " last updated "
+                              (colorize-string (human-date-string (issue-last-updated-date issue))
+                                               'CYAN)
+                              " by "
+                              (colorize-string (issue-last-updater issue)
+                                               'CYAN))))
+    (unless (zero? (issue-tasks issue))
+      (display (string-append (colorize-string "; " 'CYAN)
+                              (number->string (issue-completed-tasks issue))
+                              "/"
+                              (number->string (issue-tasks issue))
+                              " tasks done")))
+    (newline)
+    (newline)))
+
+(define (print-issue-to-gemtext issue)
+  "Print ISSUE to gemtext."
+  (let ((number-of-posts (length (issue-posts issue))))
+    (format #t "# ~a" (issue-title issue))
+    (unless (null? (issue-keywords issue))
+      (format #t " [~a]"
+              (string-join (issue-keywords issue)
+                           ", ")))
+    (unless (null? (issue-assigned issue))
+      (format #t " (assigned: ~a)"
+              (string-join (issue-assigned issue)
+                           ", ")))
+    (when (> number-of-posts 1)
+      (format #t " [~a posts]" number-of-posts))
+    (newline)
+    (format #t "opened ~a by ~a"
+            (human-date-string (issue-created-date issue))
+            (issue-creator issue))
+    (when (> number-of-posts 1)
+      (format #t ", last updated ~a by ~a"
+              (human-date-string (issue-last-updated-date issue))
+              (issue-last-updater issue)))
+    (unless (zero? (issue-tasks issue))
+      (format #t "; ~a/~a tasks done"
+              (issue-completed-tasks issue)
+              (issue-tasks issue)))
+    (newline)
+    (newline)))
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in

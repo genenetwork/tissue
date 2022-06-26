@@ -18,9 +18,11 @@
 
 (define-module (tissue utils)
   #:use-module (rnrs io ports)
+  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
   #:export (string-remove-prefix
+            human-date-string
             call-with-current-directory
             get-line-dos-or-unix
             memoize-thunk))
@@ -28,6 +30,26 @@
 (define (string-remove-prefix prefix str)
   "Remove PREFIX from STR."
   (substring str (string-length prefix)))
+
+(define (human-date-string date)
+  "Return a human readable rendering of DATE."
+  (let ((elapsed-time
+         (time-second
+          (time-difference (date->time-monotonic (current-date))
+                           (date->time-monotonic date)))))
+    (cond
+     ((< elapsed-time (* 2 60))
+      (format #f "~a seconds ago" elapsed-time))
+     ((< elapsed-time (* 2 60 60))
+      (format #f "~a minutes ago" (round (/ elapsed-time 60))))
+     ((< elapsed-time (* 2 24 60 60))
+      (format #f "~a hours ago" (round (/ elapsed-time 60 60))))
+     ((< elapsed-time (* 2 7 24 60 60))
+      (format #f "~a days ago" (round (/ elapsed-time 60 60 24))))
+     ((< elapsed-time (* 2 30 24 60 60))
+      (format #f "~a weeks ago" (round (/ elapsed-time 60 60 24 7))))
+     (else
+      (format #f "on ~a" (date->string date "~b ~d ~Y"))))))
 
 (define (call-with-current-directory curdir thunk)
   "Call THUNK with current directory set to CURDIR. Restore current
