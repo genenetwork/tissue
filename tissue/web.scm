@@ -25,39 +25,26 @@
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-28)
   #:use-module (srfi srfi-171)
-  #:use-module (skribilo ast)
   #:use-module (skribilo engine)
   #:use-module (skribilo evaluator)
-  #:use-module (skribilo lib)
-  #:use-module (skribilo package base)
   #:use-module (skribilo reader)
-  #:use-module (skribilo utils keywords)
-  #:use-module (skribilo writer)
-  #:use-module (sxml simple)
   #:use-module (web uri)
   #:use-module (tissue conditions)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
   #:export (%project-name
-            %tags-path
             file
             file?
             file-name
             file-writer
-            issue-listing
             replace-extension
             copier
             gemtext-reader
             gemtext-exporter
             skribe-exporter
-            tag-issue-lister
-            tag-pages
             build-website))
 
 (define %project-name
-  (make-parameter #f))
-
-(define %tags-path
   (make-parameter #f))
 
 (define-record-type <file>
@@ -80,46 +67,6 @@ NEW-EXTENSION."
   (string-append (substring file 0 (1+ (string-index-right file #\.)))
                  new-extension))
 
-(define-markup (issue-list-item #:rest opts
-		                #:key (ident #f) (class "issue-list-item")
-                                (file #f) (title #f)
-                                (creator #f) (created-date #f)
-                                (last-updater #f) (last-updated-date #f)
-                                (assigned #f) (keywords #f) (open #f)
-                                (tasks #f) (completed-tasks #f)
-                                (posts #f))
-  (new container
-       (markup 'issue-list-item)
-       (ident (or ident (symbol->string (gensym "issue-list-item"))))
-       (class class)
-       (loc &invocation-location)
-       (required-options '(#:file #:title
-                           #:creator #:created-date
-                           #:last-updater #:last-updated-date
-                           #:assigned #:keywords #:open
-                           #:tasks #:completed-tasks
-                           #:posts))
-       (options `((#:file ,file)
-                  (#:title ,title)
-		  (#:creator ,creator)
-                  (#:created-date ,created-date)
-                  (#:last-updater ,last-updater)
-                  (#:last-updated-date ,last-updated-date)
-                  (#:assigned ,assigned)
-                  (#:keywords ,keywords)
-                  (#:open ,open)
-                  (#:tasks ,tasks)
-                  (#:completed-tasks ,completed-tasks)
-                  (#:posts ,posts)
-		  ,@(the-options opts #:ident #:class
-                                 #:file #:title
-                                 #:creator #:created-date
-                                 #:last-updater #:last-updated-date
-                                 #:assigned #:keywords #:open
-                                 #:tasks #:completed-tasks
-                                 #:posts)))
-       (body (the-body opts))))
-
 (define (sanitize-string str)
   "Downcase STR and replace spaces with hyphens."
   (string-map (lambda (c)
@@ -127,92 +74,6 @@ NEW-EXTENSION."
                   ((#\space) #\-)
                   (else c)))
               (string-downcase str)))
-
-(define (issue-list-item-markup-writer-action markup engine)
-  (sxml->xml
-   `(li (@ (class "issue-list-item"))
-        (a (@ (href ,(string-append
-                      "/" (encode-and-join-uri-path
-                           (string-split
-                            (replace-extension (markup-option markup #:file)
-                                               "html")
-                            #\/)))))
-           ,(markup-option markup #:title))
-        ,@(map (lambda (tag)
-                 (let ((words (string-split tag (char-set #\- #\space))))
-                   `(a (@ (href ,(string-append (%tags-path) "/"
-                                                (uri-encode (sanitize-string tag))
-                                                ".html"))
-                          (class ,(string-append "tag"
-                                                 (string-append " tag-" (sanitize-string tag))
-                                                 (if (not (null? (lset-intersection
-                                                                  string=? words
-                                                                  (list "bug" "critical"))))
-                                                     " tag-bug"
-                                                     "")
-                                                 (if (not (null? (lset-intersection
-                                                                  string=? words
-                                                                  (list "progress"))))
-                                                     " tag-progress"
-                                                     "")
-                                                 (if (not (null? (lset-intersection
-                                                                  string=? words
-                                                                  (list "chore"))))
-                                                     " tag-chore"
-                                                     "")
-                                                 (if (not (null? (lset-intersection
-                                                                  string=? words
-                                                                  (list "enhancement" "feature"))))
-                                                     " tag-feature"
-                                                     ""))))
-                       ,tag)))
-               (markup-option markup #:keywords))
-        (span (@ (class "issue-list-item-metadata"))
-              ,(string-append
-                (format " opened ~a by ~a"
-                        (date->string (markup-option markup #:created-date)
-                                      "~b ~d ~Y")
-                        (markup-option markup #:creator))
-                (if (> (length (markup-option markup #:posts))
-                       1)
-                    (format ", last updated ~a by ~a"
-                            (date->string (markup-option markup #:last-updated-date)
-                                          "~b ~d ~Y")
-                            (markup-option markup #:last-updater))
-                    "")
-                (if (zero? (markup-option markup #:tasks))
-                    ""
-                    (format "; ~a of ~a tasks done"
-                            (markup-option markup #:completed-tasks)
-                            (markup-option markup #:tasks))))))))
-
-(markup-writer 'issue-list-item
-               (find-engine 'html)
-               #:options '(#:file #:title
-                           #:creator #:created-date
-                           #:last-updater #:last-updated-date
-                           #:assigned #:keywords #:open
-                           #:tasks #:completed-tasks
-                           #:posts)
-               #:action issue-list-item-markup-writer-action)
-
-(define* (issue-listing #:optional (issues (reverse (issues))))
-  "Return an issue listing for ISSUES, a list of <issue> objects. By
-default, all issues are listed newest first."
-  (itemize (map (lambda (issue)
-                  (issue-list-item #:file (issue-file issue)
-                                   #:title (issue-title issue)
-                                   #:creator (issue-creator issue)
-                                   #:created-date (issue-created-date issue)
-                                   #:last-updater (issue-last-updater issue)
-                                   #:last-updated-date (issue-last-updated-date issue)
-                                   #:assigned (issue-assigned issue)
-                                   #:keywords (issue-keywords issue)
-                                   #:open (issue-open? issue)
-                                   #:tasks (issue-tasks issue)
-                                   #:completed-tasks (issue-completed-tasks issue)
-                                   #:posts (issue-posts issue)))
-                issues)))
 
 (define (exporter file proc)
   "Return a writer function that exports FILE using PROC. PROC is
@@ -258,30 +119,6 @@ to write to."
                 (cut evaluate-document
                      (evaluate-ast-from-port in #:reader reader)
                      (find-engine 'html))))))
-
-(define* (tag-issue-lister tag #:key title)
-  "Return a writer function that writes a issue listing of issues with TAG.
-
-TITLE is the title to use in the head of the generated HTML, among
-other places."
-  (lambda (port)
-    (with-output-to-port port
-      (cut evaluate-document
-           (document #:title title
-                     (issue-listing
-                      (reverse (filter (lambda (issue)
-                                         (member tag (issue-keywords issue)))
-                                       (issues)))))
-           (find-engine 'html)))))
-
-(define (tag-pages)
-  "Return a list of <file> objects representing tag pages to be
-exported to the web output."
-  (map (lambda (tag)
-         (file (string-append (%tags-path) "/" (sanitize-string tag) ".html")
-               (tag-issue-lister tag
-                                 #:title (string-append tag " — " (%project-name)))))
-       (delete-duplicates (append-map issue-keywords (issues)))))
 
 (define (with-current-directory directory thunk)
   "Change current directory to DIRECTORY, execute THUNK and restore

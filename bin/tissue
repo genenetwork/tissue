@@ -315,9 +315,7 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 "
              (command-line-program)))
     ((output-directory)
-     (parameterize ((%project-name (tissue-configuration-project (load-config)))
-                    (%tags-path (tissue-configuration-web-tags-path
-                                 (load-config))))
+     (parameterize ((%project-name (tissue-configuration-project (load-config))))
        (build-website (getcwd)
                       output-directory
                       (tissue-configuration-web-css (load-config))
