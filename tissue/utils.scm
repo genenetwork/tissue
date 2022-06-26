@@ -20,9 +20,14 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
-  #:export (call-with-current-directory
+  #:export (string-remove-prefix
+            call-with-current-directory
             get-line-dos-or-unix
             memoize-thunk))
+
+(define (string-remove-prefix prefix str)
+  "Remove PREFIX from STR."
+  (substring str (string-length prefix)))
 
 (define (call-with-current-directory curdir thunk)
   "Call THUNK with current directory set to CURDIR. Restore current
