@@ -22,6 +22,6 @@
             issue-file-not-found-error?
             issue-file-not-found-error-issue-file))
 
-(define-condition-type &issue-file-not-found &error
+(define-condition-type &issue-file-not-found-error &error
   issue-file-not-found-error issue-file-not-found-error?
   (issue-file issue-file-not-found-error-issue-file))
