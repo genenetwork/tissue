@@ -60,10 +60,6 @@ exec guile --no-auto-compile -s "$0" "$@"
   ;; A string URI linking to this document on the web
   (web-uri indexed-document-web-uri))
 
-(define (invoke program . args)
-  (unless (zero? (apply system* program args))
-    (error "Invocation of program failed" (cons program args))))
-
 (define rlast
   (case-lambda
     (() #f)
