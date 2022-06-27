@@ -37,7 +37,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (xapian wrap)
         (xapian xapian)
         (tissue conditions)
-        (prefix (tissue document) doc:)
+        (tissue document)
         (tissue git)
         (tissue issue)
         (tissue tissue)
@@ -72,32 +72,6 @@ to run tissue."
   (match (command-line)
     ((program _ ...) program)))
 
-(define (print-document document)
-  "Print DOCUMENT, an <issue> or <document> object."
-  ((cond
-    ((issue? document) print-issue)
-    ((doc:document? document) doc:print-document)
-    (else (raise (unknown-document-type-violation document))))
-   document))
-
-(define (alist->document alist)
-  "Convert ALIST to an <issue> or <document> object."
-  ((case (assq-ref alist 'type)
-     ((issue) alist->issue)
-     ((document) doc:alist->document)
-     (else (raise (unknown-document-type-violation alist))))
-   alist))
-
-(define (document->text document)
-  "Return the text of DOCUMENT, an <issue> or <document> object."
-  (call-with-input-file
-      ((cond
-        ((issue? document) issue-file)
-        ((doc:document? document) doc:document-file)
-        (else (raise (unknown-document-type-violation document))))
-       document)
-    get-string-all))
-
 (define tissue-search
   (match-lambda*
     (("--help")
@@ -108,47 +82,36 @@ Search issues using SEARCH-QUERY.
     (args
      (call-with-database %xapian-index
        (lambda (db)
-         (let* ((stemmer (make-stem "en"))
-                (query (parse-query
-                        ;; When query does not mention type or state,
-                        ;; assume is:open. Assuming is:open is
-                        ;; implicitly assuming type:issue since only
-                        ;; issues can have is:open.
-                        (if (every string-null? args)
-                            "is:open"
-                            (string-join (if (any (lambda (query-string)
-                                                    (or (string-contains-ci query-string "type:")
-                                                        (string-contains-ci query-string "is:")))
-                                                  args)
-                                             args
-                                             (cons "is:open" args))
-                                         " AND "))
-                        #:stemmer stemmer
-                        #:prefixes '(("type" . "XT")
-                                     ("title" . "S")
-                                     ("creator" . "A")
-                                     ("last-updater" . "XA")
-                                     ("updater" . "XA")
-                                     ("assigned" . "XI")
-                                     ("keyword" . "K")
-                                     ("tag" . "K")
-                                     ("is" . "XS")))))
+         (let ((query (parse-query
+                       ;; When query does not mention type or state,
+                       ;; assume is:open. Assuming is:open is
+                       ;; implicitly assuming type:issue since only
+                       ;; issues can have is:open.
+                       (if (every string-null? args)
+                           "is:open"
+                           (string-join (if (any (lambda (query-string)
+                                                   (or (string-contains-ci query-string "type:")
+                                                       (string-contains-ci query-string "is:")))
+                                                 args)
+                                            args
+                                            (cons "is:open" args))
+                                        " AND "))
+                       #:stemmer (make-stem "en")
+                       #:prefixes '(("type" . "XT")
+                                    ("title" . "S")
+                                    ("creator" . "A")
+                                    ("last-updater" . "XA")
+                                    ("updater" . "XA")
+                                    ("assigned" . "XI")
+                                    ("keyword" . "K")
+                                    ("tag" . "K")
+                                    ("is" . "XS")))))
            (format #t "total ~a~%"
                    (mset-fold (lambda (item count)
-                                (let ((document (call-with-input-string (document-data (mset-item-document item))
-                                                  (compose alist->document read))))
-                                  (print-document document)
-                                  (let ((snippet (mset-snippet (MSetIterator-mset-get item)
-                                                               (document->text document)
-                                                               #:length 200
-                                                               #:highlight-start (color 'BOLD 'ON-RED)
-                                                               #:highlight-end (color 'RESET)
-                                                               #:stemmer stemmer)))
-                                    (unless (string-null? snippet)
-                                      (display snippet)
-                                      (newline)
-                                      (newline)))
-                                  (1+ count)))
+                                (print (call-with-input-string (document-data (mset-item-document item))
+                                         (compose scm->object read))
+                                       (MSetIterator-mset-get item))
+                                (1+ count))
                               0
                               (enquire-mset (enquire db query)
                                             #:maximum-items (database-document-count db))))))))))
@@ -280,15 +243,6 @@ top-level of the git repository."
                        (negate (cut member <> (list "." "..")))))
     (rmdir %xapian-index)))
 
-(define (index-document db document)
-  "Index DOCUMENT, an <issue> or <document> object, in writable xapian
-DB."
-  ((cond
-    ((issue? document) index-issue)
-    ((doc:document? document) doc:index-document)
-    (else (raise (unknown-document-type-violation document))))
-   db document))
-
 (define main
   (match-lambda*
     ((_ (or "-h" "--help"))
@@ -322,7 +276,12 @@ DB."
                    (call-with-writable-database %xapian-index
                      (lambda (db)
                        (for-each (lambda (indexed-document)
-                                   (index-document db ((indexed-document-reader indexed-document))))
+                                   (let* ((document ((indexed-document-reader indexed-document)))
+                                          (term-generator (document-term-generator document)))
+                                     (index-text! term-generator (document-type document) #:prefix "XT")
+                                     (replace-document! db
+                                                        (document-id-term document)
+                                                        (TermGenerator-get-document term-generator))))
                                  (tissue-configuration-indexed-documents (load-config)))
                        (WritableDatabase-set-metadata db "commit" current-head))))))
              ;; Handle sub-command.

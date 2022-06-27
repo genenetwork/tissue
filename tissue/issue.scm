@@ -21,22 +21,19 @@
   #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
+  #:use-module (oop goops)
   #:use-module (term ansi-color)
   #:use-module (git)
   #:use-module (xapian xapian)
+  #:use-module (tissue document)
   #:use-module (tissue git)
   #:use-module (tissue utils)
   #:export (%aliases
-            issue
-            issue?
-            issue-file
-            issue-title
+            <issue>
             issue-creator
             issue-created-date
             issue-last-updater
@@ -47,8 +44,7 @@
             issue-tasks
             issue-completed-tasks
             issue-posts
-            post
-            post?
+            <post>
             post-author
             post-date
             issue->alist
@@ -64,86 +60,44 @@
 (define %aliases
   (make-parameter #f))
 
-(define-record-type <issue>
-  (issue file title creator created-date last-updater last-updated-date
-         assigned keywords open tasks completed-tasks posts)
-  issue?
-  (file issue-file)
-  (title issue-title)
-  (creator issue-creator)
-  (created-date issue-created-date)
-  (last-updater issue-last-updater)
-  (last-updated-date issue-last-updated-date)
-  (assigned issue-assigned)
-  (keywords issue-keywords)
-  (open issue-open?)
-  (tasks issue-tasks)
-  (completed-tasks issue-completed-tasks)
+(define-class <issue> (<file-document>)
+  (creator #:accessor issue-creator #:init-keyword #:creator)
+  (created-date #:accessor issue-created-date #:init-keyword #:created-date)
+  (last-updater #:accessor issue-last-updater #:init-keyword #:last-updater)
+  (last-updated-date #:accessor issue-last-updated-date #:init-keyword #:last-updated-date)
+  (assigned #:accessor issue-assigned #:init-keyword #:assigned)
+  (keywords #:accessor issue-keywords #:init-keyword #:keywords)
+  (open? #:accessor issue-open? #:init-keyword #:open?)
+  (tasks #:accessor issue-tasks #:init-keyword #:tasks)
+  (completed-tasks #:accessor issue-completed-tasks #:init-keyword #:completed-tasks)
   ;; List of <post> objects, oldest first.
-  (posts issue-posts))
+  (posts #:accessor issue-posts #:init-keyword #:posts))
 
-(define-record-type <post>
-  (post author date)
-  post?
-  (author post-author)
-  (date post-date))
+(define-class <post> ()
+  (author #:accessor post-author #:init-keyword #:author)
+  (date #:accessor post-date #:init-keyword #:date))
 
-(define (date->iso-8601 date)
-  "Convert DATE, an SRFI-19 date object, to an ISO-8601 date string."
-  (date->string date "~4"))
+(define-method (document-type (issue <issue>))
+  "issue")
 
-(define (iso-8601->date str)
-  "Convert STR, an ISO-8601 date string, to an SRFI-19 date object."
-  (string->date str "~Y-~m-~dT~H:~M:~S~z"))
+(define-method (document-term-generator (issue <issue>))
+  "Return a term generator indexing ISSUE."
+  (let ((term-generator (next-method)))
+    (index-person! term-generator (issue-creator issue) "A")
+    (index-person! term-generator (issue-last-updater issue) "XA")
+    (for-each (cut index-person! term-generator <> "XI")
+              (issue-assigned issue))
+    (for-each (cut index-text! term-generator <> #:prefix "K")
+              (issue-keywords issue))
+    (index-text! term-generator
+                 (if (issue-open? issue) "open" "closed")
+                 #:prefix "XS")
+    term-generator))
 
-(define (issue->alist issue)
-  "Convert ISSUE, a <issue> object, to an association list that can be
-serialized."
-  `((type . issue)
-    (file . ,(issue-file issue))
-    (title . ,(issue-title issue))
-    (creator . ,(issue-creator issue))
-    (created-date . ,(date->iso-8601 (issue-created-date issue)))
-    (last-updater . ,(issue-last-updater issue))
-    (last-updated-date . ,(date->iso-8601 (issue-last-updated-date issue)))
-    (assigned . ,(issue-assigned issue))
-    (keywords . ,(issue-keywords issue))
-    (open . ,(issue-open? issue))
-    (tasks . ,(issue-tasks issue))
-    (completed-tasks . , (issue-completed-tasks issue))
-    (posts . ,(map post->alist (issue-posts issue)))))
-
-(define (post->alist post)
-  "Convert POST, a <post> object, to an association list that can be
-serialized."
-  `((author . ,(post-author post))
-    (date . ,(date->iso-8601 (post-date post)))))
-
-(define (alist->issue alist)
-  "Convert ALIST to an <issue> object."
-  (issue (assq-ref alist 'file)
-         (assq-ref alist 'title)
-         (assq-ref alist 'creator)
-         (iso-8601->date (assq-ref alist 'created-date))
-         (assq-ref alist 'last-updater)
-         (iso-8601->date (assq-ref alist 'last-updated-date))
-         (assq-ref alist 'assigned)
-         (assq-ref alist 'keywords)
-         (assq-ref alist 'open)
-         (assq-ref alist 'tasks)
-         (assq-ref alist 'completed-tasks)
-         (map alist->post
-              (assq-ref alist 'posts))))
-
-(define (alist->post alist)
-  "Convert ALIST to a <post> object."
-  (post (assq-ref alist 'author)
-        (iso-8601->date (assq-ref alist 'date))))
-
-(define (print-issue issue)
+(define-method (print (issue <issue>) mset)
   "Print ISSUE, an <issue> object, in search results."
   (let ((number-of-posts (length (issue-posts issue))))
-    (display (colorize-string (issue-title issue) 'MAGENTA 'UNDERLINE))
+    (display (colorize-string (document-title issue) 'MAGENTA 'UNDERLINE))
     (unless (null? (issue-keywords issue))
       (display " ")
       (display (string-join (map (cut colorize-string <> 'ON-BLUE)
@@ -160,7 +114,7 @@ serialized."
                               (number->string number-of-posts)
                               " posts]")))
     (newline)
-    (display (colorize-string (issue-file issue) 'YELLOW))
+    (display (colorize-string (file-document-path issue) 'YELLOW))
     (newline)
     (display (string-append
               "opened "
@@ -182,12 +136,21 @@ serialized."
                               (number->string (issue-tasks issue))
                               " tasks done")))
     (newline)
-    (newline)))
+    (let ((snippet (mset-snippet mset
+                                 (document-text issue)
+                                 #:length 200
+                                 #:highlight-start (color 'BOLD 'ON-RED)
+                                 #:highlight-end (color 'RESET)
+                                 #:stemmer (make-stem "en"))))
+      (unless (string-null? snippet)
+        (display snippet)
+        (newline)
+        (newline)))))
 
 (define (print-issue-to-gemtext issue)
   "Print ISSUE to gemtext."
   (let ((number-of-posts (length (issue-posts issue))))
-    (format #t "# ~a" (issue-title issue))
+    (format #t "# ~a" (document-title issue))
     (unless (null? (issue-keywords issue))
       (format #t " [~a]"
               (string-join (issue-keywords issue)
@@ -366,26 +329,28 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                                 (resolve-alias (signature-name (commit-author commit))
                                                (%aliases)))
                               commits)))
-    (issue file
-           ;; Fallback to filename if title has no alphabetic
-           ;; characters.
-           (let ((title (hashtable-ref file-details 'title "")))
-             (if (string-any char-set:letter title) title file))
-           (first commit-authors)
-           (commit-date (first commits))
-           (last commit-authors)
-           (commit-date (last commits))
-           (hashtable-ref file-details 'assigned '())
-           ;; "closed" is a special keyword to indicate
-           ;; the open/closed status of an issue.
-           (delete "closed" all-keywords)
-           (not (member "closed" all-keywords))
-           (hashtable-ref file-details 'tasks 0)
-           (hashtable-ref file-details 'completed-tasks 0)
-           (map (lambda (commit author)
-                  (post author (commit-date commit)))
-                commits
-                commit-authors))))
+    (make <issue>
+      #:path file
+      ;; Fallback to filename if title has no alphabetic characters.
+      #:title (let ((title (hashtable-ref file-details 'title "")))
+                (if (string-any char-set:letter title) title file))
+      #:creator (first commit-authors)
+      #:created-date (commit-date (first commits))
+      #:last-updater (last commit-authors)
+      #:last-updated-date (commit-date (last commits))
+      #:assigned (hashtable-ref file-details 'assigned '())
+      ;; "closed" is a special keyword to indicate the open/closed
+      ;; status of an issue.
+      #:keywords (delete "closed" all-keywords)
+      #:open? (not (member "closed" all-keywords))
+      #:tasks (hashtable-ref file-details 'tasks 0)
+      #:completed-tasks (hashtable-ref file-details 'completed-tasks 0)
+      #:posts (map (lambda (commit author)
+                     (make <post>
+                       #:author author
+                       #:date (commit-date commit)))
+                   commits
+                   commit-authors))))
 
 (define (index-person term-generator name prefix)
   "Index all aliases of person of canonical NAME using TERM-GENERATOR
@@ -393,30 +358,3 @@ with PREFIX."
   (for-each (cut index-text! term-generator <> #:prefix prefix)
             (or (assoc name (%aliases))
                 (list))))
-
-(define (index-issue db issue)
-  "Index ISSUE in writable xapian DB."
-  (let* ((idterm (string-append "Q" (issue-file issue)))
-         (body (call-with-input-file (issue-file issue)
-                 get-string-all))
-         (doc (make-document #:data (call-with-output-string
-                                      (cut write (issue->alist issue) <>))
-                             #:terms `((,idterm . 0))))
-         (term-generator (make-term-generator #:stem (make-stem "en")
-                                              #:document doc)))
-    ;; Index metadata with various prefixes.
-    (index-text! term-generator "issue" #:prefix "XT")
-    (index-text! term-generator (issue-title issue) #:prefix "S")
-    (index-person term-generator (issue-creator issue) "A")
-    (index-person term-generator (issue-last-updater issue) "XA")
-    (for-each (cut index-person term-generator <> "XI")
-              (issue-assigned issue))
-    (for-each (cut index-text! term-generator <> #:prefix "K")
-              (issue-keywords issue))
-    (index-text! term-generator
-                 (if (issue-open? issue) "open" "closed")
-                 #:prefix "XS")
-    ;; Index body without prefixes for free text search.
-    (index-text! term-generator body)
-    ;; Add document to database.
-    (replace-document! db idterm doc)))
