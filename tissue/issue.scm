@@ -347,7 +347,7 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
                    commits
                    commit-authors))))
 
-(define (index-person term-generator name prefix)
+(define (index-person! term-generator name prefix)
   "Index all aliases of person of canonical NAME using TERM-GENERATOR
 with PREFIX."
   (for-each (cut index-text! term-generator <> #:prefix prefix)
