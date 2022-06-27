@@ -19,6 +19,7 @@
 (define-module (tissue document)
   #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
@@ -39,6 +40,20 @@
             <file-document>
             file-document-path
             read-gemtext-document))
+
+;; We override the default write to print object slots and values.
+(define-method (write (object <object>) port)
+  "Write OBJECT to PORT."
+  (format port "#<~a ~a>"
+          (class-name (class-of object))
+          (string-join (filter-map (lambda (slot)
+                                     (let ((slot-name (slot-definition-name slot)))
+                                       (and (slot-bound? object slot-name)
+                                            (call-with-output-string
+                                              (cut format <> "~s: ~s"
+                                                   slot-name
+                                                   (slot-ref object slot-name))))))
+                                   (class-slots (class-of object))))))
 
 (define (date->iso-8601 date)
   "Convert DATE, an SRFI-19 date object, to an ISO-8601 date string."
