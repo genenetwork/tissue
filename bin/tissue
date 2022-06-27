@@ -40,6 +40,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (tissue document)
         (tissue git)
         (tissue issue)
+        (tissue search)
         (tissue tissue)
         (tissue utils)
         (tissue web static))
@@ -82,39 +83,11 @@ Search issues using SEARCH-QUERY.
     (args
      (call-with-database %xapian-index
        (lambda (db)
-         (let ((query (parse-query
-                       ;; When query does not mention type or state,
-                       ;; assume is:open. Assuming is:open is
-                       ;; implicitly assuming type:issue since only
-                       ;; issues can have is:open.
-                       (if (every string-null? args)
-                           "is:open"
-                           (string-join (if (any (lambda (query-string)
-                                                   (or (string-contains-ci query-string "type:")
-                                                       (string-contains-ci query-string "is:")))
-                                                 args)
-                                            args
-                                            (cons "is:open" args))
-                                        " AND "))
-                       #:stemmer (make-stem "en")
-                       #:prefixes '(("type" . "XT")
-                                    ("title" . "S")
-                                    ("creator" . "A")
-                                    ("last-updater" . "XA")
-                                    ("updater" . "XA")
-                                    ("assigned" . "XI")
-                                    ("keyword" . "K")
-                                    ("tag" . "K")
-                                    ("is" . "XS")))))
-           (format #t "total ~a~%"
-                   (mset-fold (lambda (item count)
-                                (print (call-with-input-string (document-data (mset-item-document item))
-                                         (compose scm->object read))
-                                       (MSetIterator-mset-get item))
+         (format #t "total ~a~%"
+                 (search-fold (lambda (document mset count)
+                                (print document mset)
                                 (1+ count))
-                              0
-                              (enquire-mset (enquire db query)
-                                            #:maximum-items (database-document-count db))))))))))
+                              0 db args)))))))
 
 (define tissue-show
   (match-lambda*

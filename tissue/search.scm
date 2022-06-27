@@ -1,0 +1,68 @@
+;;; tissue --- Text based issue tracker
+;;; Copyright © 2022 Arun Isaac <arunisaac@systemreboot.net>
+;;;
+;;; This file is part of tissue.
+;;;
+;;; tissue is free software: you can redistribute it and/or modify it
+;;; under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation, either version 3 of the License, or
+;;; (at your option) any later version.
+;;;
+;;; tissue is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
+
+(define-module (tissue search)
+  #:use-module (srfi srfi-1)
+  #:use-module (tissue document)
+  #:use-module (tissue issue)
+  #:use-module (xapian wrap)
+  #:use-module (xapian xapian)
+  #:export (search-fold
+            search-map))
+
+(define (search-fold proc initial db search-terms)
+  "Search xapian database DB using SEARCH-TERMS and fold over the
+results using PROC and INITIAL. SEARCH-TERMS is a list of search terms
+that are joined with the \"AND\" operator.
+
+PROC is invoked as (PROC DOCUMENT MSET PREVIOUS). DOCUMENT is an
+instance of <document> or one of its subclasses. MSET is the xapian
+MSet object representing the search results. PREVIOUS is the return
+from the previous invocation of PROC, or the given INITIAL for the
+first call."
+  (let ((query (parse-query
+                ;; When query does not mention type or state,
+                ;; assume is:open. Assuming is:open is
+                ;; implicitly assuming type:issue since only
+                ;; issues can have is:open.
+                (if (every string-null? search-terms)
+                    "is:open"
+                    (string-join (if (any (lambda (query-string)
+                                            (or (string-contains-ci query-string "type:")
+                                                (string-contains-ci query-string "is:")))
+                                          search-terms)
+                                     search-terms
+                                     (cons "is:open" search-terms))
+                                 " AND "))
+                #:stemmer (make-stem "en")
+                #:prefixes '(("type" . "XT")
+                             ("title" . "S")
+                             ("creator" . "A")
+                             ("last-updater" . "XA")
+                             ("assigned" . "XI")
+                             ("keyword" . "K")
+                             ("tag" . "K")
+                             ("is" . "XS")))))
+    (mset-fold (lambda (item result)
+                 (proc (call-with-input-string (document-data (mset-item-document item))
+                         (compose scm->object read))
+                       (MSetIterator-mset-get item)
+                       result))
+               initial
+               (enquire-mset (enquire db query)
+                             #:maximum-items (database-document-count db)))))
