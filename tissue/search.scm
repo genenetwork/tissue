@@ -66,3 +66,19 @@ first call."
                initial
                (enquire-mset (enquire db query)
                              #:maximum-items (database-document-count db)))))
+
+(define (search-map proc db search-terms)
+  "Search xapian database DB using SEARCH-TERMS and map over the results
+using PROC. SEARCH-TERMS are a list of search terms that are joined
+with the \"AND\" operator.
+
+PROC is invoked as (PROC DOCUMENT MSET). DOCUMENT is an instance of
+<document> or one of its subclasses. MSET is the xapian MSet object
+representing the search results."
+  (reverse
+   (search-fold (lambda (document mset result)
+                  (cons (proc document mset)
+                        result))
+                '()
+                db
+                search-terms)))
