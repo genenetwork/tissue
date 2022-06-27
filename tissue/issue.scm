@@ -223,11 +223,6 @@ return #f."
              '()
              (comma-split (remove-prefix "* " line)))))
 
-(define (unix-time->date timestamp)
-  "Convert unix TIMESTAMP to an SRFI-19 date object."
-  (time-monotonic->date
-   (make-time time-monotonic 0 timestamp)))
-
 (define (resolve-alias name aliases)
   "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
 in the form of the argument of the same name to `tissue-configuration'
