@@ -41,6 +41,8 @@
             document-term-generator
             document-snippet
             print
+            document-sxml-snippet
+            document->sxml
             <file-document>
             file-document-path
             read-gemtext-document))
@@ -205,6 +207,42 @@ MSet object representing a list of search results."
       (display snippet)
       (newline)
       (newline))))
+
+(define (document-sxml-snippet document mset)
+  "Return snippet in SXML form for DOCUMENT. MSET is the xapian MSet
+object representing a list of search results."
+  ;; mset-snippet returns serialized HTML. So, we reverse it with
+  ;; html->sxml.
+  (match (html->sxml (mset-snippet mset
+                                   (document-text document)
+                                   #:length 200
+                                   #:highlight-start "<b>"
+                                   #:highlight-end "</b>"
+                                   #:stemmer (make-stem "en")))
+    (('*TOP* children ...)
+     (append-map (lambda (child)
+                   (cond
+                    ;; Add (br) if end of line.
+                    ((and (string? child)
+                          (string-suffix? "\n" child))
+                     (list (string-trim-right child #\newline)
+                           '(br)))
+                    ;; Else, return verbatim.
+                    (else
+                     (list child))))
+                 children))))
+
+(define-method (document->sxml (document <file-document>) mset)
+  "Render DOCUMENT to SXML. MSET is the xapian MSet object representing
+a list of search results."
+  `(li (@ (class "search-result"))
+       (a (@ (href ,(document-web-uri document)))
+          ,(document-title document))
+       ,@(let ((snippet (document-sxml-snippet document mset)))
+           (if snippet
+               (list `(span (@ (class "search-result-snippet"))
+                            ,@snippet))
+               (list)))))
 
 (define (read-gemtext-document file)
   "Reade gemtext document from FILE. Return a <file-document> object."

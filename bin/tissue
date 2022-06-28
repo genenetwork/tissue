@@ -32,6 +32,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (ice-9 match)
         (ice-9 popen)
         (ice-9 regex)
+        (system repl server)
         (term ansi-color)
         (git)
         (xapian wrap)
@@ -43,6 +44,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (tissue search)
         (tissue tissue)
         (tissue utils)
+        (tissue web server)
         (tissue web static))
 
 (define %state-directory
@@ -190,6 +192,72 @@ Export the repository as a website to OUTPUT-DIRECTORY.
                       (tissue-configuration-web-css (load-config))
                       (tissue-configuration-web-files (load-config)))))))
 
+(define (address->socket-address address port)
+  "Convert ADDRESS and PORT to a socket address."
+  (cond
+   ;; IPv4
+   ((string-contains address ".")
+    (make-socket-address AF_INET
+                         (inet-pton AF_INET address)
+                         port))
+   ;; IPv6
+   ((string-contains address ":")
+    (make-socket-address AF_INET6
+                         (inet-pton AF_INET6 address)
+                         port))
+   ;; Unix socket
+   (else
+    (make-socket-address AF_UNIX address))))
+
+(define tissue-run-web
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a run-web
+Run a web search service for the current repository.
+
+  --address=IP       run web server listening on IP address [default=127.0.0.1]
+  --port=PORT        run web server listening on PORT [default=8080]
+  --listen-repl=P    run REPL server listening on port or path P
+"
+             (command-line-program)))
+    (args
+     (let ((args (args-fold args
+                            (list (option (list "address")
+                                          #t #f
+                                          (lambda (opt name arg result)
+                                            (acons 'address arg result)))
+                                  (option (list "port")
+                                          #t #f
+                                          (lambda (opt name arg result)
+                                            (acons 'port (string->number arg)
+                                                   result)))
+                                  (option '("listen-repl")
+                                          #t #f
+                                          (lambda (opt name arg result)
+                                            (acons 'listen-repl arg result))))
+                            invalid-option
+                            invalid-operand
+                            ;; Default address and port
+                            '((address . "127.0.0.1")
+                              (port . 8080)))))
+       (let ((listen-repl (assq-ref args 'listen-repl)))
+         (when listen-repl
+           (spawn-server (cond
+                          ((string? listen-repl)
+                           (format (current-error-port)
+                                   "REPL server listening on port ~a~%"
+                                   listen-repl)
+                           (make-unix-domain-server-socket #:path listen-repl))
+                          (else
+                           (format (current-error-port)
+                                   "REPL server listening on ~a~%"
+                                   listen-repl)
+                           (make-unix-domain-server-socket #:path listen-repl))))))
+       (start-web-server (address->socket-address (assq-ref args 'address)
+                                                  (assq-ref args 'port))
+                         %xapian-index
+                         (tissue-configuration-web-css (load-config)))))))
+
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
 
@@ -199,6 +267,7 @@ COMMAND must be one of the sub-commands listed below:
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
   web       export repository as website
+  run-web   run a web search service
 
 To get usage information for one of these sub-commands, run
   ~a COMMAND --help
@@ -266,6 +335,7 @@ top-level of the git repository."
                       ("show" tissue-show)
                       ("repl" tissue-repl)
                       ("web" tissue-web)
+                      ("run-web" tissue-run-web)
                       (invalid-command
                        (format (current-error-port) "Invalid command `~a'~%~%"
                                invalid-command)

@@ -28,6 +28,7 @@
   #:use-module (oop goops)
   #:use-module (term ansi-color)
   #:use-module (git)
+  #:use-module (web uri)
   #:use-module (xapian xapian)
   #:use-module (tissue document)
   #:use-module (tissue git)
@@ -178,6 +179,62 @@
                   ((#\space) #\-)
                   (else c)))
               (string-downcase str)))
+
+(define-method (document->sxml (issue <issue>) mset)
+  "Render ISSUE, an <issue> object, to SXML. MSET is the xapian MSet
+object representing a list of search results."
+  `(li (@ (class "search-result"))
+       (a (@ (href ,(document-web-uri issue)))
+          ,(document-title issue))
+       ,@(map (lambda (tag)
+                (let ((words (string-split tag (char-set #\- #\space))))
+                  `(a (@ (href ,(string-append "/search?query="
+                                               (uri-encode (string-append "tag:" tag))))
+                         (class ,(string-append "tag"
+                                                (string-append " tag-" (sanitize-string tag))
+                                                (if (not (null? (lset-intersection
+                                                                 string=? words
+                                                                 (list "bug" "critical"))))
+                                                    " tag-bug"
+                                                    "")
+                                                (if (not (null? (lset-intersection
+                                                                 string=? words
+                                                                 (list "progress"))))
+                                                    " tag-progress"
+                                                    "")
+                                                (if (not (null? (lset-intersection
+                                                                 string=? words
+                                                                 (list "chore"))))
+                                                    " tag-chore"
+                                                    "")
+                                                (if (not (null? (lset-intersection
+                                                                 string=? words
+                                                                 (list "enhancement" "feature"))))
+                                                    " tag-feature"
+                                                    ""))))
+                      ,tag)))
+              (issue-keywords issue))
+       (span (@ (class "search-result-metadata"))
+             ,(string-append
+               (format #f " opened ~a by ~a"
+                       (human-date-string (issue-created-date issue))
+                       (issue-creator issue))
+               (if (> (length (issue-posts issue))
+                      1)
+                   (format #f ", last updated ~a by ~a"
+                           (human-date-string (issue-last-updated-date issue))
+                           (issue-last-updater issue))
+                   "")
+               (if (zero? (issue-tasks issue))
+                   ""
+                   (format #f "; ~a of ~a tasks done"
+                           (issue-completed-tasks issue)
+                           (issue-tasks issue)))))
+       ,@(let ((snippet (document-sxml-snippet issue mset)))
+           (if snippet
+               (list `(span (@ (class "search-result-snippet"))
+                            ,@snippet))
+               (list)))))
 
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
