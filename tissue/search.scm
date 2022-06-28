@@ -25,10 +25,9 @@
   #:export (search-fold
             search-map))
 
-(define (search-fold proc initial db search-terms)
-  "Search xapian database DB using SEARCH-TERMS and fold over the
-results using PROC and INITIAL. SEARCH-TERMS is a list of search terms
-that are joined with the \"AND\" operator.
+(define (search-fold proc initial db search-query)
+  "Search xapian database DB using SEARCH-QUERY and fold over the
+results using PROC and INITIAL.
 
 PROC is invoked as (PROC DOCUMENT MSET PREVIOUS). DOCUMENT is an
 instance of <document> or one of its subclasses. MSET is the xapian
@@ -40,15 +39,12 @@ first call."
                 ;; assume is:open. Assuming is:open is
                 ;; implicitly assuming type:issue since only
                 ;; issues can have is:open.
-                (if (every string-null? search-terms)
+                (if (string-null? search-query)
                     "is:open"
-                    (string-join (if (any (lambda (query-string)
-                                            (or (string-contains-ci query-string "type:")
-                                                (string-contains-ci query-string "is:")))
-                                          search-terms)
-                                     search-terms
-                                     (cons "is:open" search-terms))
-                                 " AND "))
+                    (if (or (string-contains-ci search-query "type:")
+                            (string-contains-ci search-query "is:"))
+                        search-query
+                        (string-append "is:open " search-query)))
                 #:stemmer (make-stem "en")
                 #:prefixes '(("type" . "XT")
                              ("title" . "S")
@@ -67,10 +63,9 @@ first call."
                (enquire-mset (enquire db query)
                              #:maximum-items (database-document-count db)))))
 
-(define (search-map proc db search-terms)
-  "Search xapian database DB using SEARCH-TERMS and map over the results
-using PROC. SEARCH-TERMS are a list of search terms that are joined
-with the \"AND\" operator.
+(define (search-map proc db search-query)
+  "Search xapian database DB using SEARCH-QUERY and map over the results
+using PROC.
 
 PROC is invoked as (PROC DOCUMENT MSET). DOCUMENT is an instance of
 <document> or one of its subclasses. MSET is the xapian MSet object
@@ -81,4 +76,4 @@ representing the search results."
                         result))
                 '()
                 db
-                search-terms)))
+                search-query)))

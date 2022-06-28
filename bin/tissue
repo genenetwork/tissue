@@ -90,7 +90,7 @@ Search issues using SEARCH-QUERY.
                  (search-fold (lambda (document mset count)
                                 (print document mset)
                                 (1+ count))
-                              0 db args)))))))
+                              0 db (string-join args))))))))
 
 (define tissue-show
   (match-lambda*

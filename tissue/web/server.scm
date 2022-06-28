@@ -143,7 +143,7 @@ to a stylesheet."
                   (lambda (db)
                     (search-map document->sxml
                                 db
-                                (list (assoc-ref parameters "query")))))
+                                (assoc-ref parameters "query"))))
                 css))))
      (else
       (values (build-response #:code 404)
