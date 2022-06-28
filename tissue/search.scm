@@ -25,7 +25,7 @@
   #:export (search-fold
             search-map))
 
-(define (search-fold proc initial db search-query)
+(define* (search-fold proc initial db search-query #:key (offset 0) (maximum-items 10))
   "Search xapian database DB using SEARCH-QUERY and fold over the
 results using PROC and INITIAL.
 
@@ -33,7 +33,11 @@ PROC is invoked as (PROC DOCUMENT MSET PREVIOUS). DOCUMENT is an
 instance of <document> or one of its subclasses. MSET is the xapian
 MSet object representing the search results. PREVIOUS is the return
 from the previous invocation of PROC, or the given INITIAL for the
-first call."
+first call.
+
+OFFSET specifies the number of items to ignore at the beginning of the
+result set. MAXIMUM-ITEMS specifies the maximum number of items to
+return."
   (let ((query (parse-query
                 ;; When query does not mention type or state,
                 ;; assume is:open. Assuming is:open is
@@ -61,19 +65,24 @@ first call."
                        result))
                initial
                (enquire-mset (enquire db query)
-                             #:maximum-items (database-document-count db)))))
+                             #:maximum-items maximum-items))))
 
-(define (search-map proc db search-query)
+(define* (search-map proc db search-query #:key (offset 0) (maximum-items 10))
   "Search xapian database DB using SEARCH-QUERY and map over the results
 using PROC.
 
 PROC is invoked as (PROC DOCUMENT MSET). DOCUMENT is an instance of
 <document> or one of its subclasses. MSET is the xapian MSet object
-representing the search results."
+representing the search results.
+
+OFFSET specifies the number of items to ignore at the beginning of the
+result set. MAXIMUM-ITEMS specifies the maximum number of items to
+return."
   (reverse
    (search-fold (lambda (document mset result)
                   (cons (proc document mset)
                         result))
                 '()
                 db
-                search-query)))
+                search-query
+                #:maximum-items maximum-items)))

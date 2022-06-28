@@ -86,11 +86,7 @@ Search issues using SEARCH-QUERY.
     (args
      (call-with-database %xapian-index
        (lambda (db)
-         (format #t "total ~a~%"
-                 (search-fold (lambda (document mset count)
-                                (print document mset)
-                                (1+ count))
-                              0 db (string-join args))))))))
+         (search-map print db (string-join args)))))))
 
 (define tissue-show
   (match-lambda*
