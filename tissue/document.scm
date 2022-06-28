@@ -28,7 +28,8 @@
   #:use-module (term ansi-color)
   #:use-module (xapian xapian)
   #:use-module (tissue utils)
-  #:export (object->scm
+  #:export (slot-set
+            object->scm
             scm->object
             <document>
             document-title
@@ -40,6 +41,13 @@
             <file-document>
             file-document-path
             read-gemtext-document))
+
+(define (slot-set object slot-name value)
+  "Set SLOT-NAME in OBJECT to VALUE. This is a purely functional setter
+that operates on a copy of OBJECT. It does not mutate OBJECT."
+  (let ((clone (shallow-clone object)))
+    (slot-set! clone slot-name value)
+    clone))
 
 ;; We override the default write to print object slots and values.
 (define-method (write (object <object>) port)
