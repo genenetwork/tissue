@@ -250,7 +250,9 @@ top-level of the git repository."
                    (call-with-writable-database %xapian-index
                      (lambda (db)
                        (for-each (lambda (indexed-document)
-                                   (let* ((document ((indexed-document-reader indexed-document)))
+                                   (let* ((document (slot-set ((indexed-document-reader indexed-document))
+                                                              'web-uri
+                                                              (indexed-document-web-uri indexed-document)))
                                           (term-generator (document-term-generator document)))
                                      (index-text! term-generator (document-type document) #:prefix "XT")
                                      (replace-document! db

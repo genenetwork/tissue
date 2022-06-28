@@ -34,6 +34,7 @@
             scm->object
             <document>
             document-title
+            document-web-uri
             document-type
             document-id-term
             document-text
@@ -129,7 +130,8 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
       object))))
 
 (define-class <document> ()
-  (title #:accessor document-title #:init-keyword #:title))
+  (title #:accessor document-title #:init-keyword #:title)
+  (web-uri #:accessor document-web-uri #:init-keyword #:web-uri))
 
 (define-method (document-type (document <document>))
   "document")
