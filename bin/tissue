@@ -79,7 +79,8 @@ to run tissue."
      (format #t "Usage: ~a search SEARCH-QUERY
 Search issues using SEARCH-QUERY.
 
-"))
+"
+             (command-line-program)))
     (args
      (call-with-database %xapian-index
        (lambda (db)
