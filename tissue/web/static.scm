@@ -67,14 +67,6 @@ NEW-EXTENSION."
   (string-append (substring file 0 (1+ (string-index-right file #\.)))
                  new-extension))
 
-(define (sanitize-string str)
-  "Downcase STR and replace spaces with hyphens."
-  (string-map (lambda (c)
-                (case c
-                  ((#\space) #\-)
-                  (else c)))
-              (string-downcase str)))
-
 (define (exporter file proc)
   "Return a writer function that exports FILE using PROC. PROC is
 passed two arguments---the input port to read from and the output port

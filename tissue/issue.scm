@@ -176,6 +176,14 @@
     (newline)
     (newline)))
 
+(define (sanitize-string str)
+  "Downcase STR and replace spaces with hyphens."
+  (string-map (lambda (c)
+                (case c
+                  ((#\space) #\-)
+                  (else c)))
+              (string-downcase str)))
+
 (define (hashtable-append! hashtable key new-values)
   "Append NEW-VALUES to the list of values KEY is associated to in
 HASHTABLE. Deduplicate the resulting list if necessary. If KEY is not
