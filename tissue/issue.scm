@@ -136,12 +136,7 @@
                               (number->string (issue-tasks issue))
                               " tasks done")))
     (newline)
-    (let ((snippet (mset-snippet mset
-                                 (document-text issue)
-                                 #:length 200
-                                 #:highlight-start (color 'BOLD 'ON-RED)
-                                 #:highlight-end (color 'RESET)
-                                 #:stemmer (make-stem "en"))))
+    (let ((snippet (document-snippet issue mset)))
       (unless (string-null? snippet)
         (display snippet)
         (newline)

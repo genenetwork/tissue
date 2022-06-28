@@ -24,6 +24,7 @@
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
+  #:use-module (htmlprag)
   #:use-module (oop goops)
   #:use-module (term ansi-color)
   #:use-module (xapian xapian)
@@ -37,6 +38,7 @@
             document-id-term
             document-text
             document-term-generator
+            document-snippet
             print
             <file-document>
             file-document-path
@@ -167,6 +169,27 @@ and further text, increase-termpos! must be called before indexing."
     (index-text! term-generator (file-document-path document))
     term-generator))
 
+(define (document-snippet document mset)
+  "Return snippet for DOCUMENT. MSET is the xapian MSet object
+representing a list of search results."
+  ;; mset-snippet returns serialized HTML. So, we reverse it with
+  ;; html->sxml.
+  (match (html->sxml (mset-snippet mset
+                                   (document-text document)
+                                   #:length 200
+                                   #:highlight-start "<b>"
+                                   #:highlight-end "</b>"
+                                   #:stemmer (make-stem "en")))
+    (('*TOP* children ...)
+     (string-join
+      (map (match-lambda
+             ;; Colorize string instead of HTML bold.
+             (('b str) (colorize-string str 'BOLD 'ON-RED))
+             ;; Else, return verbatim.
+             (str str))
+           children)
+      ""))))
+
 (define-method (print (document <file-document>) mset)
   "Print DOCUMENT in command-line search results. MSET is the xapian
 MSet object representing a list of search results."
@@ -175,12 +198,7 @@ MSet object representing a list of search results."
   (display (colorize-string (file-document-path document) 'YELLOW))
   (newline)
   (newline)
-  (let ((snippet (mset-snippet mset
-                               (document-text document)
-                               #:length 200
-                               #:highlight-start (color 'BOLD 'ON-RED)
-                               #:highlight-end (color 'RESET)
-                               #:stemmer (make-stem "en"))))
+  (let ((snippet (document-snippet document mset)))
     (unless (string-null? snippet)
       (display snippet)
       (newline)
