@@ -86,7 +86,15 @@ Search issues using SEARCH-QUERY.
     (args
      (call-with-database %xapian-index
        (lambda (db)
-         (search-map print db (string-join args)))))))
+         (call-with-output-pipe
+          (lambda (port)
+            (search-map (cut print <> <> port)
+                        db
+                        (string-join args)
+                        #:maximum-items (database-document-count db)))
+          (or (getenv "PAGER")
+              "less")
+          "--raw"))))))
 
 (define tissue-show
   (match-lambda*
