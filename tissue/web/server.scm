@@ -55,6 +55,32 @@ form {
     font-size: larger;
 }
 
+.search-result-title, .search-result-title:before {
+    vertical-align: middle;
+}
+
+.search-result-document .search-result-title:before, .search-result-issue .search-result-metadata:before {
+    font-size: xx-small;
+    font-weight: bold;
+    margin: 0 0.2em;
+    padding: 0 0.4em;
+    background-color: darkmagenta;
+    color: white;
+}
+
+.search-result-document .search-result-title:before {
+    content: \"DOC\";
+}
+
+.search-result-open-issue .search-result-metadata:before {
+    content: \"ISSUE\";
+    background-color: green;
+}
+
+.search-result-closed-issue .search-result-metadata:before {
+    content: \"✓ ISSUE\";
+}
+
 .search-result-metadata {
     color: dimgray;
     font-size: smaller;
