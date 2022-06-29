@@ -33,8 +33,8 @@ sources = $(wildcard $(top_level_module_dir)/*.scm) $(wildcard $(top_level_modul
 objects = $(sources:.scm=.go)
 scripts = $(wildcard bin/*)
 
-scmdir = $(datarootdir)/guile/site/$(guile_effective_version)/$(top_level_module_dir)
-godir = $(libdir)/guile/$(guile_effective_version)/site-ccache/$(top_level_module_dir)
+scmdir = $(datarootdir)/guile/site/$(guile_effective_version)
+godir = $(libdir)/guile/$(guile_effective_version)/site-ccache
 
 .PHONY: all check install clean
 
