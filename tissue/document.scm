@@ -210,7 +210,6 @@ MSet object representing a list of search results."
   (newline)
   (display (colorize-string (file-document-path document) 'YELLOW))
   (newline)
-  (newline)
   (let ((snippet (document-snippet document mset)))
     (unless (string-null? snippet)
       (display snippet)
