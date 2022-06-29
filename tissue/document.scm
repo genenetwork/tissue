@@ -177,7 +177,11 @@ and further text, increase-termpos! must be called before indexing."
   "Return snippet for DOCUMENT. MSET is the xapian MSet object
 representing a list of search results."
   (mset-snippet mset
-                (document-text document)
+                (string-join
+                 (remove (cut string-every char-set:whitespace <>)
+                         (string-split (document-text document)
+                                       #\newline))
+                 "\n")
                 #:length 200
                 #:highlight-start "<b>"
                 #:highlight-end "</b>"
