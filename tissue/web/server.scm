@@ -160,20 +160,17 @@ to a stylesheet."
             (request-method request)
             path)
     (cond
-     ((string=? path "/")
-      (values '((content-type . (text/html)))
-              (sxml->html (make-search-page '() "" css))))
-     ((string=? "/search" path)
-      (values '((content-type . (text/html)))
-              (sxml->html
-               (make-search-page
-                (call-with-database xapian-index
-                  (lambda (db)
-                    (search-map document->sxml
-                                db
-                                (assoc-ref parameters "query"))))
-                (assoc-ref parameters "query")
-                css))))
+     ((member path (list "/" "/search"))
+      (let ((search-query (or (assoc-ref parameters "query")
+                              "")))
+        (values '((content-type . (text/html)))
+                (sxml->html
+                 (make-search-page
+                  (call-with-database xapian-index
+                    (lambda (db)
+                      (search-map document->sxml db search-query)))
+                  search-query
+                  css)))))
      (else
       (values (build-response #:code 404)
               (string-append "Resource not found: "
