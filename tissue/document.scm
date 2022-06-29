@@ -209,6 +209,8 @@ MSet object representing a list of search results."
   (display (colorize-string (document-title document) 'MAGENTA 'UNDERLINE)
            port)
   (newline port)
+  (display (colorize-string "DOCUMENT" 'BOLD 'YELLOW) port)
+  (display " " port)
   (display (colorize-string (file-document-path document) 'YELLOW)
            port)
   (newline port)
