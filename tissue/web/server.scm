@@ -45,6 +45,17 @@ form {
     text-align: center;
 }
 
+.search-hint {
+    line-height: 2em;
+}
+
+.search-filter {
+    background-color: gray;
+    color: white;
+    border-radius: 0.2em;
+    padding: 0 0.2em;
+}
+
 .search-result {
     list-style-type: none;
     padding: 0.5em;
@@ -136,6 +147,30 @@ a URI to a stylesheet."
                      (value ,query)
                      (placeholder "Enter search query")))
            (input (@ (type "submit") (value "Search"))))
+     (details (@ (class "search-hint"))
+      (summary "Hint")
+      (p "Refine your search with filters "
+         ,@(append-map (lambda (filter)
+                         (list `(span (@ (class "search-filter"))
+                                      ,filter)
+                               ", "))
+                       (list "type:issue"
+                             "type:document"
+                             "is:open"
+                             "is:closed"
+                             "title:git"
+                             "creator:mani"
+                             "lastupdater:vel"
+                             "assigned:muthu"
+                             "tag:feature-request"))
+         "etc. Optionally, combine search terms with boolean
+operators "
+         (span (@ (class "search-filter"))
+               "AND")
+         " and "
+         (span (@ (class "search-filter"))
+               "OR")
+         "."))
      (ul ,@results))))
 
 (define (query-parameters query)
