@@ -196,7 +196,10 @@
 (define-method (document->sxml (issue <issue>) mset)
   "Render ISSUE, an <issue> object, to SXML. MSET is the xapian MSet
 object representing a list of search results."
-  `(li (@ (class "search-result"))
+  `(li (@ (class ,(string-append "search-result search-result-issue "
+                                 (if (issue-open? issue)
+                                     "search-result-open-issue"
+                                     "search-result-closed-issue"))))
        (a (@ (href ,(document-web-uri issue)))
           ,(document-title issue))
        ,@(map (lambda (tag)
