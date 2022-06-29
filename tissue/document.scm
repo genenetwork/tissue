@@ -173,17 +173,22 @@ and further text, increase-termpos! must be called before indexing."
     (index-text! term-generator (file-document-path document))
     term-generator))
 
+(define (document-html-snippet document mset)
+  "Return snippet for DOCUMENT. MSET is the xapian MSet object
+representing a list of search results."
+  (mset-snippet mset
+                (document-text document)
+                #:length 200
+                #:highlight-start "<b>"
+                #:highlight-end "</b>"
+                #:stemmer (make-stem "en")))
+
 (define (document-snippet document mset)
   "Return snippet for DOCUMENT. MSET is the xapian MSet object
 representing a list of search results."
-  ;; mset-snippet returns serialized HTML. So, we reverse it with
-  ;; html->sxml.
-  (match (html->sxml (mset-snippet mset
-                                   (document-text document)
-                                   #:length 200
-                                   #:highlight-start "<b>"
-                                   #:highlight-end "</b>"
-                                   #:stemmer (make-stem "en")))
+  ;; mset-snippet, and thus document-html-snippet, returns serialized
+  ;; HTML. So, we reverse it with html->sxml.
+  (match (html->sxml (document-html-snippet document mset))
     (('*TOP* children ...)
      (string-join
       (map (match-lambda
@@ -211,14 +216,9 @@ MSet object representing a list of search results."
 (define (document-sxml-snippet document mset)
   "Return snippet in SXML form for DOCUMENT. MSET is the xapian MSet
 object representing a list of search results."
-  ;; mset-snippet returns serialized HTML. So, we reverse it with
-  ;; html->sxml.
-  (match (html->sxml (mset-snippet mset
-                                   (document-text document)
-                                   #:length 200
-                                   #:highlight-start "<b>"
-                                   #:highlight-end "</b>"
-                                   #:stemmer (make-stem "en")))
+  ;; mset-snippet, and thus document-html-snippet, returns serialized
+  ;; HTML. So, we reverse it with html->sxml.
+  (match (html->sxml (document-html-snippet document mset))
     (('*TOP* children ...)
      (append-map (lambda (child)
                    (cond
