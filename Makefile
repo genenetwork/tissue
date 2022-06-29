@@ -45,8 +45,8 @@ all: $(objects)
 
 check: ;
 
-install: $(scripts)
-	install -D $^ --target-directory $(bindir)
+install:
+	install -D $(scripts) --target-directory $(bindir)
 	install -D $(sources) --target-directory $(scmdir)
 	install -D $(objects) --target-directory $(godir)
 
