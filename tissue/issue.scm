@@ -233,7 +233,7 @@ object representing a list of search results."
               (issue-keywords issue))
        (div (@ (class "search-result-metadata"))
             ,(string-append
-              (format #f " opened ~a by ~a"
+              (format #f "opened ~a by ~a"
                       (human-date-string (issue-created-date issue))
                       (issue-creator issue))
               (if (> (length (issue-posts issue))
