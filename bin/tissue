@@ -88,10 +88,7 @@ Search issues using SEARCH-QUERY.
        (lambda (db)
          (call-with-output-pipe
           (lambda (port)
-            (search-map (cut print <> <> port)
-                        db
-                        (string-join args)
-                        #:maximum-items (database-document-count db)))
+            (search-map (cut print <> <> port) db (string-join args)))
           (or (getenv "PAGER")
               "less")
           "--raw"))))))

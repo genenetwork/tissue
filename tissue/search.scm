@@ -25,7 +25,8 @@
   #:export (search-fold
             search-map))
 
-(define* (search-fold proc initial db search-query #:key (offset 0) (maximum-items 10))
+(define* (search-fold proc initial db search-query
+                      #:key (offset 0) (maximum-items (database-document-count db)))
   "Search xapian database DB using SEARCH-QUERY and fold over the
 results using PROC and INITIAL.
 
@@ -67,7 +68,8 @@ return."
                (enquire-mset (enquire db query)
                              #:maximum-items maximum-items))))
 
-(define* (search-map proc db search-query #:key (offset 0) (maximum-items 10))
+(define* (search-map proc db search-query
+                     #:key (offset 0) (maximum-items (database-document-count db)))
   "Search xapian database DB using SEARCH-QUERY and map over the results
 using PROC.
 
