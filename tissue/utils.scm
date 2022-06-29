@@ -24,6 +24,7 @@
   #:export (string-remove-prefix
             human-date-string
             call-with-current-directory
+            call-with-output-pipe
             get-line-dos-or-unix
             memoize-thunk))
 
@@ -58,6 +59,20 @@ directory after THUNK returns."
     (dynamic-wind (cut chdir curdir)
                   thunk
                   (cut chdir original-current-directory))))
+
+(define (call-with-output-pipe proc program . args)
+  "Execute PROGRAM ARGS ... in a subprocess with a pipe to it. Call PROC
+with an output port to that pipe. Close the pipe once PROC exits, even
+if it exits non-locally. Return the value returned by PROC."
+  (let ((port #f))
+    (dynamic-wind
+      (cut set! port (apply open-pipe* OPEN_WRITE program args))
+      (cut proc port)
+      (lambda ()
+        (let ((return-value (status:exit-val (close-pipe port))))
+          (unless (and return-value
+                       (zero? return-value))
+            (error "Invocation of program failed" (cons program args))))))))
 
 (define (get-line-dos-or-unix port)
   "Read line from PORT. This differs from `get-line' in (rnrs io
