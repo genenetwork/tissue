@@ -47,8 +47,9 @@ check: ;
 
 install:
 	install -D $(scripts) --target-directory $(bindir)
-	install -D $(sources) --target-directory $(scmdir)
-	install -D $(objects) --target-directory $(godir)
+	mkdir -p $(scmdir) $(godir)
+	cp --parents -vr $(sources) $(scmdir)
+	cp --parents -vr $(objects) $(godir)
 
 clean:
 	rm -f $(objects)
