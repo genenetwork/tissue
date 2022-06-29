@@ -200,7 +200,8 @@ object representing a list of search results."
                                  (if (issue-open? issue)
                                      "search-result-open-issue"
                                      "search-result-closed-issue"))))
-       (a (@ (href ,(document-web-uri issue)))
+       (a (@ (href ,(document-web-uri issue))
+             (class "search-result-title"))
           ,(document-title issue))
        ,@(map (lambda (tag)
                 (let ((words (string-split tag (char-set #\- #\space))))

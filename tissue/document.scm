@@ -243,7 +243,8 @@ object representing a list of search results."
   "Render DOCUMENT to SXML. MSET is the xapian MSet object representing
 a list of search results."
   `(li (@ (class "search-result search-result-document"))
-       (a (@ (href ,(document-web-uri document)))
+       (a (@ (href ,(document-web-uri document))
+             (class "search-result-title"))
           ,(document-title document))
        ,@(let ((snippet (document-sxml-snippet document mset)))
            (if snippet
