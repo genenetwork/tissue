@@ -203,18 +203,20 @@ representing a list of search results."
            children)
       ""))))
 
-(define-method (print (document <file-document>) mset)
+(define-method (print (document <file-document>) mset port)
   "Print DOCUMENT in command-line search results. MSET is the xapian
 MSet object representing a list of search results."
-  (display (colorize-string (document-title document) 'MAGENTA 'UNDERLINE))
-  (newline)
-  (display (colorize-string (file-document-path document) 'YELLOW))
-  (newline)
+  (display (colorize-string (document-title document) 'MAGENTA 'UNDERLINE)
+           port)
+  (newline port)
+  (display (colorize-string (file-document-path document) 'YELLOW)
+           port)
+  (newline port)
   (let ((snippet (document-snippet document mset)))
     (unless (string-null? snippet)
-      (display snippet)
-      (newline)
-      (newline))))
+      (display snippet port)
+      (newline port)
+      (newline port))))
 
 (define (document-sxml-snippet document mset)
   "Return snippet in SXML form for DOCUMENT. MSET is the xapian MSet
