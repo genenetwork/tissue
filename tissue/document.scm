@@ -244,8 +244,8 @@ a list of search results."
           ,(document-title document))
        ,@(let ((snippet (document-sxml-snippet document mset)))
            (if snippet
-               (list `(span (@ (class "search-result-snippet"))
-                            ,@snippet))
+               (list `(div (@ (class "search-result-snippet"))
+                           ,@snippet))
                (list)))))
 
 (define (read-gemtext-document file)

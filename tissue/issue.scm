@@ -214,26 +214,26 @@ object representing a list of search results."
                                                     ""))))
                       ,tag)))
               (issue-keywords issue))
-       (span (@ (class "search-result-metadata"))
-             ,(string-append
-               (format #f " opened ~a by ~a"
-                       (human-date-string (issue-created-date issue))
-                       (issue-creator issue))
-               (if (> (length (issue-posts issue))
-                      1)
-                   (format #f ", last updated ~a by ~a"
-                           (human-date-string (issue-last-updated-date issue))
-                           (issue-last-updater issue))
-                   "")
-               (if (zero? (issue-tasks issue))
-                   ""
-                   (format #f "; ~a of ~a tasks done"
-                           (issue-completed-tasks issue)
-                           (issue-tasks issue)))))
+       (div (@ (class "search-result-metadata"))
+            ,(string-append
+              (format #f " opened ~a by ~a"
+                      (human-date-string (issue-created-date issue))
+                      (issue-creator issue))
+              (if (> (length (issue-posts issue))
+                     1)
+                  (format #f ", last updated ~a by ~a"
+                          (human-date-string (issue-last-updated-date issue))
+                          (issue-last-updater issue))
+                  "")
+              (if (zero? (issue-tasks issue))
+                  ""
+                  (format #f "; ~a of ~a tasks done"
+                          (issue-completed-tasks issue)
+                          (issue-tasks issue)))))
        ,@(let ((snippet (document-sxml-snippet issue mset)))
            (if snippet
-               (list `(span (@ (class "search-result-snippet"))
-                            ,@snippet))
+               (list `(div (@ (class "search-result-snippet"))
+                           ,@snippet))
                (list)))))
 
 (define (hashtable-append! hashtable key new-values)

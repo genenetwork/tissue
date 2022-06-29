@@ -57,7 +57,6 @@ form {
 
 .search-result-metadata {
     color: dimgray;
-    display: block;
     font-size: smaller;
 }
 
