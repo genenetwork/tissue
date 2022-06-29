@@ -48,7 +48,7 @@ return."
                     (if (or (string-contains-ci search-query "type:")
                             (string-contains-ci search-query "is:"))
                         search-query
-                        (string-append "is:open " search-query)))
+                        (string-append "is:open AND (" search-query ")")))
                 #:stemmer (make-stem "en")
                 #:prefixes '(("type" . "XT")
                              ("title" . "S")
