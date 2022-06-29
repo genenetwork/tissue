@@ -117,9 +117,9 @@ a.tag-chore {
     color: black;
 }")
 
-(define (make-search-page results css)
-  "Return SXML for a page with search RESULTS. CSS is a URI to a
-stylesheet."
+(define (make-search-page results query css)
+  "Return SXML for a page with search RESULTS produced for QUERY. CSS is
+a URI to a stylesheet."
   `(html
     (head
      (title "Tissue search")
@@ -131,7 +131,10 @@ stylesheet."
            (list)))
     (body
      (form (@ (action "/search") (method "GET"))
-           (input (@ (type "search") (name "query") (placeholder "Enter search query")))
+           (input (@ (type "text")
+                     (name "query")
+                     (value ,query)
+                     (placeholder "Enter search query")))
            (input (@ (type "submit") (value "Search"))))
      (ul ,@results))))
 
@@ -159,7 +162,7 @@ to a stylesheet."
     (cond
      ((string=? path "/")
       (values '((content-type . (text/html)))
-              (sxml->html (make-search-page '() css))))
+              (sxml->html (make-search-page '() "" css))))
      ((string=? "/search" path)
       (values '((content-type . (text/html)))
               (sxml->html
@@ -169,6 +172,7 @@ to a stylesheet."
                     (search-map document->sxml
                                 db
                                 (assoc-ref parameters "query"))))
+                (assoc-ref parameters "query")
                 css))))
      (else
       (values (build-response #:code 404)
