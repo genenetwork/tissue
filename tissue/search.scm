@@ -54,7 +54,7 @@ return."
                 #:prefixes '(("type" . "XT")
                              ("title" . "S")
                              ("creator" . "A")
-                             ("last-updater" . "XA")
+                             ("lastupdater" . "XA")
                              ("assigned" . "XI")
                              ("keyword" . "K")
                              ("tag" . "K")
