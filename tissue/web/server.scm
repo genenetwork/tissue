@@ -179,7 +179,8 @@ operators "
      (p "Found an estimated "
         (strong ,(string-append (number->string estimated-matches))
                 " results"))
-     (ul ,@results))))
+     (ul (@ (class "search-results"))
+         ,@results))))
 
 (define (query-parameters query)
   "Return an association list of query parameters in web QUERY string."
