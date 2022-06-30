@@ -303,6 +303,8 @@ top-level of the git repository."
   (match-lambda*
     ((_ (or "-h" "--help"))
      (print-usage))
+    ((_ "run-web" args ...)
+     (apply tissue-run-web args))
     ((_ command args ...)
      (guard (c ((issue-file-not-found-error? c)
                 (display (string-append "No such file or directory: "
@@ -348,7 +350,6 @@ top-level of the git repository."
                       ("show" tissue-show)
                       ("repl" tissue-repl)
                       ("web" tissue-web)
-                      ("run-web" tissue-run-web)
                       ("index" tissue-index)
                       (invalid-command
                        (format (current-error-port) "Invalid command `~a'~%~%"
