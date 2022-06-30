@@ -251,6 +251,10 @@ Run a web search service reading configuration from CONFIG-FILE.
                                    listen-repl)
                            (make-unix-domain-server-socket #:path listen-repl))))))
        (start-web-server (listen->socket-address (assq-ref args 'listen))
+                         (or (assq-ref args 'hosts)
+                             ;; Assume current directory as default.
+                             `(("localhost"
+                                (indexed-repository . ,(getcwd)))))
                          %xapian-index
                          (tissue-configuration-web-css (load-config)))))))
 

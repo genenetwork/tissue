@@ -36,6 +36,7 @@
   #:use-module (tissue conditions)
   #:use-module (tissue document)
   #:use-module (tissue search)
+  #:use-module (tissue utils)
   #:export (start-web-server))
 
 (define %css
@@ -164,49 +165,63 @@ operators "
            (string-split query #\&))
       '()))
 
-(define (handler request body xapian-index css)
+(define (handler request body hosts xapian-index css)
   "Handle web REQUEST with BODY and return two values---the response
-headers and body. XAPIAN-INDEX is the path to the xapian database
-relative to the top-level of the current git repository. CSS is a URI
-to a stylesheet."
+headers and body.
+
+See `start-web-server' for documentation of HOSTS, XAPIAN-INDEX and
+CSS."
   (let ((path (uri-path (request-uri request)))
-        (parameters (query-parameters (uri-query (request-uri request)))))
+        (parameters (query-parameters (uri-query (request-uri request))))
+        (host-parameters (or (assoc-ref hosts
+                                        (match (assq-ref (request-headers request) 'host)
+                                          ((hostname . _) hostname)))
+                             ;; If no matching host is found, pick the
+                             ;; first known host.
+                             (match hosts
+                               (((_ . host-parameters) _ ...)
+                                host-parameters)))))
     (format #t "~a ~a\n"
             (request-method request)
             path)
-    (cond
-     ((member path (list "/" "/search"))
-      (let ((search-query (or (assoc-ref parameters "query")
-                              "")))
-        (values '((content-type . (text/html)))
-                (sxml->html
-                 (call-with-database xapian-index
-                   (lambda (db)
-                     (let ((mset (enquire-mset (enquire db (parse-query search-query))
-                                               #:offset 0
-                                               #:maximum-items (database-document-count db))))
-                       (make-search-page
-                        (reverse
-                         (mset-fold (lambda (item result)
-                                      (cons (document->sxml
-                                             (call-with-input-string (document-data (mset-item-document item))
-                                               (compose scm->object read))
-                                             mset)
-                                            result))
-                                    '()
-                                    mset))
-                        search-query
-                        (MSet-get-matches-estimated mset)
-                        css))))))))
-     (else
-      (values (build-response #:code 404)
-              (string-append "Resource not found: "
-                             (uri->string (request-uri request))))))))
+    (call-with-current-directory (assq-ref host-parameters 'indexed-repository)
+      (lambda ()
+        (cond
+         ((member path (list "/" "/search"))
+          (let ((search-query (or (assoc-ref parameters "query")
+                                  "")))
+            (values '((content-type . (text/html)))
+                    (sxml->html
+                     (call-with-database xapian-index
+                       (lambda (db)
+                         (let ((mset (enquire-mset (enquire db (parse-query search-query))
+                                                   #:offset 0
+                                                   #:maximum-items (database-document-count db))))
+                           (make-search-page
+                            (reverse
+                             (mset-fold (lambda (item result)
+                                          (cons (document->sxml
+                                                 (call-with-input-string (document-data (mset-item-document item))
+                                                   (compose scm->object read))
+                                                 mset)
+                                                result))
+                                        '()
+                                        mset))
+                            search-query
+                            (MSet-get-matches-estimated mset)
+                            css))))))))
+         (else
+          (values (build-response #:code 404)
+                  (string-append "Resource not found: "
+                                 (uri->string (request-uri request))))))))))
 
-(define (start-web-server socket-address xapian-index css)
-  "Start web server listening on SOCKET-ADDRESS. XAPIAN-INDEX is the
-path to the xapian database relative to the top-level of the current
-git repository. CSS is a URI to a stylesheet."
+(define (start-web-server socket-address hosts xapian-index css)
+  "Start web server listening on SOCKET-ADDRESS.
+
+HOSTS is an association list mapping host names to another association
+list containing parameters for that host. XAPIAN-INDEX is the path to
+the xapian database relative to the top-level of the git
+repository. CSS is a URI to a stylesheet."
   (format (current-error-port)
           "Tissue web server listening on ~a~%"
           (cond
@@ -230,7 +245,7 @@ git repository. CSS is a URI to a stylesheet."
                 ;; variable each time so as to support live hacking.
                 ((module-ref (resolve-module '(tissue web server))
                              'handler)
-                 request body xapian-index css))
+                 request body hosts xapian-index css))
               'http
               (cond
                ;; IPv4 or IPv6 address
