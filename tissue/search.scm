@@ -21,9 +21,35 @@
   #:use-module (tissue document)
   #:use-module (tissue issue)
   #:use-module (xapian wrap)
-  #:use-module (xapian xapian)
-  #:export (search-fold
+  #:use-module ((xapian xapian) #:renamer (lambda (symbol)
+                                            (case symbol
+                                              ((parse-query) 'xapian:parse-query)
+                                              (else symbol))))
+  #:export (parse-query
+            search-fold
             search-map))
+
+(define (parse-query search-query)
+  "Parse SEARCH-QUERY and return a xapian Query object."
+  (xapian:parse-query
+   ;; When query does not mention type or state, assume
+   ;; is:open. Assuming is:open is implicitly assuming type:issue
+   ;; since only issues can have is:open.
+   (if (string-null? search-query)
+       "is:open"
+       (if (or (string-contains-ci search-query "type:")
+               (string-contains-ci search-query "is:"))
+           search-query
+           (string-append "is:open AND (" search-query ")")))
+   #:stemmer (make-stem "en")
+   #:prefixes '(("type" . "XT")
+                ("title" . "S")
+                ("creator" . "A")
+                ("lastupdater" . "XA")
+                ("assigned" . "XI")
+                ("keyword" . "K")
+                ("tag" . "K")
+                ("is" . "XS"))))
 
 (define* (search-fold proc initial db search-query
                       #:key (offset 0) (maximum-items (database-document-count db)))
@@ -39,34 +65,14 @@ first call.
 OFFSET specifies the number of items to ignore at the beginning of the
 result set. MAXIMUM-ITEMS specifies the maximum number of items to
 return."
-  (let ((query (parse-query
-                ;; When query does not mention type or state,
-                ;; assume is:open. Assuming is:open is
-                ;; implicitly assuming type:issue since only
-                ;; issues can have is:open.
-                (if (string-null? search-query)
-                    "is:open"
-                    (if (or (string-contains-ci search-query "type:")
-                            (string-contains-ci search-query "is:"))
-                        search-query
-                        (string-append "is:open AND (" search-query ")")))
-                #:stemmer (make-stem "en")
-                #:prefixes '(("type" . "XT")
-                             ("title" . "S")
-                             ("creator" . "A")
-                             ("lastupdater" . "XA")
-                             ("assigned" . "XI")
-                             ("keyword" . "K")
-                             ("tag" . "K")
-                             ("is" . "XS")))))
-    (mset-fold (lambda (item result)
-                 (proc (call-with-input-string (document-data (mset-item-document item))
-                         (compose scm->object read))
-                       (MSetIterator-mset-get item)
-                       result))
-               initial
-               (enquire-mset (enquire db query)
-                             #:maximum-items maximum-items))))
+  (mset-fold (lambda (item result)
+               (proc (call-with-input-string (document-data (mset-item-document item))
+                       (compose scm->object read))
+                     (MSetIterator-mset-get item)
+                     result))
+             initial
+             (enquire-mset (enquire db (parse-query search-query))
+                           #:maximum-items maximum-items)))
 
 (define* (search-map proc db search-query
                      #:key (offset 0) (maximum-items (database-document-count db)))
