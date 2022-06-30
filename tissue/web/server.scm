@@ -148,29 +148,29 @@ a URI to a stylesheet."
                      (placeholder "Enter search query")))
            (input (@ (type "submit") (value "Search"))))
      (details (@ (class "search-hint"))
-      (summary "Hint")
-      (p "Refine your search with filters "
-         ,@(append-map (lambda (filter)
-                         (list `(span (@ (class "search-filter"))
-                                      ,filter)
-                               ", "))
-                       (list "type:issue"
-                             "type:document"
-                             "is:open"
-                             "is:closed"
-                             "title:git"
-                             "creator:mani"
-                             "lastupdater:vel"
-                             "assigned:muthu"
-                             "tag:feature-request"))
-         "etc. Optionally, combine search terms with boolean
+              (summary "Hint")
+              (p "Refine your search with filters "
+                 ,@(append-map (lambda (filter)
+                                 (list `(span (@ (class "search-filter"))
+                                              ,filter)
+                                       ", "))
+                               (list "type:issue"
+                                     "type:document"
+                                     "is:open"
+                                     "is:closed"
+                                     "title:git"
+                                     "creator:mani"
+                                     "lastupdater:vel"
+                                     "assigned:muthu"
+                                     "tag:feature-request"))
+                 "etc. Optionally, combine search terms with boolean
 operators "
-         (span (@ (class "search-filter"))
-               "AND")
-         " and "
-         (span (@ (class "search-filter"))
-               "OR")
-         "."))
+                 (span (@ (class "search-filter"))
+                       "AND")
+                 " and "
+                 (span (@ (class "search-filter"))
+                       "OR")
+                 "."))
      (ul ,@results))))
 
 (define (query-parameters query)
