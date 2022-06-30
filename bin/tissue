@@ -66,9 +66,6 @@ exec guile --no-auto-compile -s "$0" "$@"
 (define (invalid-option opt name arg loads)
   (error "Invalid option" name))
 
-(define (invalid-operand arg loads)
-  (error "Invalid argument" arg))
-
 (define (command-line-program)
   "Return the name, that is arg0, of the command-line program invoked
 to run tissue."
@@ -213,31 +210,23 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 (define tissue-run-web
   (match-lambda*
     (("--help")
-     (format #t "Usage: ~a run-web
-Run a web search service for the current repository.
+     (format #t "Usage: ~a run-web CONFIG-FILE
+Run a web search service reading configuration from CONFIG-FILE.
 
-  --address=IP       run web server listening on IP address [default=127.0.0.1]
-  --port=PORT        run web server listening on PORT [default=8080]
   --listen-repl=P    run REPL server listening on port or path P
 "
              (command-line-program)))
     (args
      (let ((args (args-fold args
-                            (list (option (list "address")
-                                          #t #f
-                                          (lambda (opt name arg result)
-                                            (acons 'address arg result)))
-                                  (option (list "port")
-                                          #t #f
-                                          (lambda (opt name arg result)
-                                            (acons 'port (string->number arg)
-                                                   result)))
-                                  (option '("listen-repl")
+                            (list (option '("listen-repl")
                                           #t #f
                                           (lambda (opt name arg result)
                                             (acons 'listen-repl arg result))))
                             invalid-option
-                            invalid-operand
+                            (lambda (config-file result)
+                              (append (call-with-input-file config-file
+                                        read)
+                                      result))
                             ;; Default address and port
                             '((address . "127.0.0.1")
                               (port . 8080)))))
