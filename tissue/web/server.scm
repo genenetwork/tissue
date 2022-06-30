@@ -60,6 +60,10 @@ form {
     padding: 0 0.2em;
 }
 
+.search-results {
+    padding: 0;
+}
+
 .search-result {
     list-style-type: none;
     padding: 0.5em;
