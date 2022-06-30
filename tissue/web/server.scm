@@ -241,5 +241,8 @@ git repository. CSS is a URI to a stylesheet."
                       #:port (sockaddr:port socket-address)))
                ;; Unix socket
                ((= (sockaddr:fam socket-address) AF_UNIX)
-                (list #:socket (make-unix-domain-server-socket
-                                #:path (sockaddr:path socket-address)))))))
+                (let ((socket (make-unix-domain-server-socket
+                               #:path (sockaddr:path socket-address))))
+                  ;; Grant read-write permissions to all users.
+                  (chmod (sockaddr:path socket-address) #o666)
+                  (list #:socket socket))))))
