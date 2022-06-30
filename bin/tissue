@@ -251,12 +251,20 @@ Run a web search service reading configuration from CONFIG-FILE.
                                    listen-repl)
                            (make-unix-domain-server-socket #:path listen-repl))))))
        (start-web-server (listen->socket-address (assq-ref args 'listen))
-                         (or (assq-ref args 'hosts)
-                             ;; Assume current directory as default.
-                             `(("localhost"
-                                (indexed-repository . ,(getcwd)))))
-                         %xapian-index
-                         (tissue-configuration-web-css (load-config)))))))
+                         (map (match-lambda
+                                ((name parameters ...)
+                                 ;; Set CSS for each host.
+                                 (call-with-current-directory (assq-ref parameters 'indexed-repository)
+                                   (lambda ()
+                                     (cons name
+                                           (acons 'css
+                                                  (tissue-configuration-web-css (load-config))
+                                                  parameters))))))
+                              (or (assq-ref args 'hosts)
+                                  ;; Assume current directory as default.
+                                  `(("localhost"
+                                     (indexed-repository . ,(getcwd))))))
+                         %xapian-index)))))
 
 ;; This is a noop, since the index is built on any tissue command. It
 ;; exists just for the --help usage summary.

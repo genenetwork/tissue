@@ -165,12 +165,11 @@ operators "
            (string-split query #\&))
       '()))
 
-(define (handler request body hosts xapian-index css)
+(define (handler request body hosts xapian-index)
   "Handle web REQUEST with BODY and return two values---the response
 headers and body.
 
-See `start-web-server' for documentation of HOSTS, XAPIAN-INDEX and
-CSS."
+See `start-web-server' for documentation of HOSTS and XAPIAN-INDEX."
   (let ((path (uri-path (request-uri request)))
         (parameters (query-parameters (uri-query (request-uri request))))
         (host-parameters (or (assoc-ref hosts
@@ -209,19 +208,19 @@ CSS."
                                         mset))
                             search-query
                             (MSet-get-matches-estimated mset)
-                            css))))))))
+                            (assq-ref host-parameters 'css)))))))))
          (else
           (values (build-response #:code 404)
                   (string-append "Resource not found: "
                                  (uri->string (request-uri request))))))))))
 
-(define (start-web-server socket-address hosts xapian-index css)
+(define (start-web-server socket-address hosts xapian-index)
   "Start web server listening on SOCKET-ADDRESS.
 
 HOSTS is an association list mapping host names to another association
 list containing parameters for that host. XAPIAN-INDEX is the path to
 the xapian database relative to the top-level of the git
-repository. CSS is a URI to a stylesheet."
+repository."
   (format (current-error-port)
           "Tissue web server listening on ~a~%"
           (cond
@@ -245,7 +244,7 @@ repository. CSS is a URI to a stylesheet."
                 ;; variable each time so as to support live hacking.
                 ((module-ref (resolve-module '(tissue web server))
                              'handler)
-                 request body hosts xapian-index css))
+                 request body hosts xapian-index))
               'http
               (cond
                ;; IPv4 or IPv6 address
