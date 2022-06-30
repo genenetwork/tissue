@@ -45,14 +45,8 @@ body {
     margin: 0 auto;
 }
 
-form {
-    text-align: center;
-}
-
-.search-hint {
-    line-height: 2em;
-}
-
+form { text-align: center; }
+.search-hint { line-height: 2em; }
 .search-filter {
     background-color: gray;
     color: white;
@@ -60,24 +54,16 @@ form {
     padding: 0 0.2em;
 }
 
-.search-results {
-    padding: 0;
-}
-
+.search-results { padding: 0; }
 .search-result {
     list-style-type: none;
     padding: 0.5em;
 }
-
 .search-result a {
     text-decoration: none;
     font-size: larger;
 }
-
-.search-result-title, .search-result-title:before {
-    vertical-align: middle;
-}
-
+.search-result-title, .search-result-title:before { vertical-align: middle; }
 .search-result-document .search-result-title:before, .search-result-issue .search-result-metadata:before {
     font-size: xx-small;
     font-weight: bold;
@@ -86,28 +72,17 @@ form {
     background-color: darkmagenta;
     color: white;
 }
-
-.search-result-document .search-result-title:before {
-    content: \"DOC\";
-}
-
+.search-result-document .search-result-title:before { content: \"DOC\"; }
 .search-result-open-issue .search-result-metadata:before {
     content: \"ISSUE\";
     background-color: green;
 }
-
-.search-result-closed-issue .search-result-metadata:before {
-    content: \"✓ ISSUE\";
-}
-
+.search-result-closed-issue .search-result-metadata:before { content: \"✓ ISSUE\"; }
 .search-result-metadata {
     color: dimgray;
     font-size: smaller;
 }
-
-.search-result-snippet {
-    font-size: smaller;
-}
+.search-result-snippet { font-size: smaller; }
 
 a.tag {
     padding: 0.25em 0.4em;
@@ -117,20 +92,12 @@ a.tag {
     margin: auto 0.25em;
     font-size: smaller;
 }
-
-a.tag-bug {
-    background-color: red;
-}
-
-a.tag-feature {
-    background-color: green;
-}
-
+a.tag-bug { background-color: red; }
+a.tag-feature { background-color: green; }
 a.tag-progress, a.tag-unassigned {
     background-color: orange;
     color: black;
 }
-
 a.tag-chore {
     background-color: khaki;
     color: black;
