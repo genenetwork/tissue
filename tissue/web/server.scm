@@ -28,7 +28,11 @@
   #:use-module (web response)
   #:use-module (web server)
   #:use-module (web uri)
-  #:use-module (xapian xapian)
+  #:use-module (xapian wrap)
+  #:use-module ((xapian xapian) #:renamer (lambda (symbol)
+                                            (case symbol
+                                              ((parse-query) 'xapian:parse-query)
+                                              (else symbol))))
   #:use-module (tissue conditions)
   #:use-module (tissue document)
   #:use-module (tissue search)
@@ -128,9 +132,10 @@ a.tag-chore {
     color: black;
 }")
 
-(define (make-search-page results query css)
-  "Return SXML for a page with search RESULTS produced for QUERY. CSS is
-a URI to a stylesheet."
+(define (make-search-page results query estimated-matches css)
+  "Return SXML for a page with search RESULTS produced for
+QUERY. ESTIMATED-MATCHES is the estimated number of matches. CSS is a
+URI to a stylesheet."
   `(html
     (head
      (title "Tissue search")
@@ -171,6 +176,9 @@ operators "
                  (span (@ (class "search-filter"))
                        "OR")
                  "."))
+     (p "Found an estimated "
+        (strong ,(string-append (number->string estimated-matches))
+                " results"))
      (ul ,@results))))
 
 (define (query-parameters query)
@@ -200,12 +208,24 @@ to a stylesheet."
                               "")))
         (values '((content-type . (text/html)))
                 (sxml->html
-                 (make-search-page
-                  (call-with-database xapian-index
-                    (lambda (db)
-                      (search-map document->sxml db search-query)))
-                  search-query
-                  css)))))
+                 (call-with-database xapian-index
+                   (lambda (db)
+                     (let ((mset (enquire-mset (enquire db (parse-query search-query))
+                                               #:offset 0
+                                               #:maximum-items (database-document-count db))))
+                       (make-search-page
+                        (reverse
+                         (mset-fold (lambda (item result)
+                                      (cons (document->sxml
+                                             (call-with-input-string (document-data (mset-item-document item))
+                                               (compose scm->object read))
+                                             mset)
+                                            result))
+                                    '()
+                                    mset))
+                        search-query
+                        (MSet-get-matches-estimated mset)
+                        css))))))))
      (else
       (values (build-response #:code 404)
               (string-append "Resource not found: "
