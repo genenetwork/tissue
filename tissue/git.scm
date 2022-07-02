@@ -33,6 +33,7 @@
             current-git-repository
             commit-date
             git-tracked-files
+            call-with-file-in-git
             file-modification-table))
 
 ;; We bind additional functions from libgit2 that are not already
@@ -78,6 +79,15 @@ repository."
 returned paths are relative to the top-level directory of REPOSITORY
 and do not have a leading slash."
   (tree-list (head-tree repository)))
+
+(define (call-with-file-in-git repository path proc)
+  "Call PROC on an input port reading contents of PATH in REPOSITORY."
+  (let* ((path-tree-entry (tree-entry-bypath (head-tree repository)
+                                             path))
+         (path-object (tree-entry->object repository path-tree-entry))
+         (blob (blob-lookup repository (object-id path-object))))
+    (call-with-port (open-bytevector-input-port (blob-content blob))
+      proc)))
 
 (define (commit-deltas repository commit)
   "Return the list of <diff-delta> objects created by COMMIT with
