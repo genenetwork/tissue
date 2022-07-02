@@ -269,10 +269,6 @@ strings, and return them as a list."
   (map (cut string-trim-both <>)
        (string-split str #\,)))
 
-(define (remove-prefix prefix str)
-  "Remove PREFIX from STR."
-  (substring str (string-length prefix)))
-
 (define (<=n-words? str n)
   "Return #t if STR has N words or less. Else, return #f."
   (<= (length (string-split str #\space))
@@ -298,7 +294,7 @@ return #f."
                     (cons (cons key (cons element values))
                           tail))))))
              '()
-             (comma-split (remove-prefix "* " line)))))
+             (comma-split (string-remove-prefix "* " line)))))
 
 (define (resolve-alias name aliases)
   "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
@@ -354,7 +350,7 @@ gemtext file."
 				   ;; Is every comma-separated
 				   ;; element two words utmost?
 				   (every (cut <=n-words? <> 2)
-					  (comma-split (remove-prefix "* " line)))
+					  (comma-split (string-remove-prefix "* " line)))
 				   ;; Does any comma-separated
 				   ;; element contain a potential
 				   ;; keyword?
@@ -365,16 +361,16 @@ gemtext file."
                                                      "enhancement" "progress"
                                                      "testing" "later" "documentation"
                                                      "help" "closed")))
-					(comma-split (remove-prefix "* " line))))
+					(comma-split (string-remove-prefix "* " line))))
                               (hashtable-append! result 'keywords
 						 (comma-split
-						  (remove-prefix "* " line))))
+						  (string-remove-prefix "* " line))))
                              ;; The first level one heading is the
                              ;; title.
                              ((string-prefix? "# " line)
                               (unless (hashtable-contains? result 'title)
 				(hashtable-set! result 'title
-						(remove-prefix "# " line)))))))
+						(string-remove-prefix "# " line)))))))
                     (const #t)
                     get-line-dos-or-unix
                     port)
