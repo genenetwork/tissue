@@ -33,7 +33,6 @@
                                             (case symbol
                                               ((parse-query) 'xapian:parse-query)
                                               (else symbol))))
-  #:use-module (tissue conditions)
   #:use-module (tissue document)
   #:use-module (tissue search)
   #:use-module (tissue utils)

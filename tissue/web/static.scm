@@ -29,7 +29,6 @@
   #:use-module (skribilo evaluator)
   #:use-module (skribilo reader)
   #:use-module (web uri)
-  #:use-module (tissue conditions)
   #:use-module (tissue git)
   #:use-module (tissue issue)
   #:use-module (tissue utils)

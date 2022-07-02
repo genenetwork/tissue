@@ -37,7 +37,6 @@ exec guile --no-auto-compile -s "$0" "$@"
         (git)
         (xapian wrap)
         (xapian xapian)
-        (tissue conditions)
         (tissue document)
         (tissue git)
         (tissue issue)
@@ -311,57 +310,51 @@ top-level of the git repository."
     ((_ "run-web" args ...)
      (apply tissue-run-web args))
     ((_ command args ...)
-     (guard (c ((issue-file-not-found-error? c)
-                (display (string-append "No such file or directory: "
-                                        (issue-file-not-found-error-issue-file c))
-                         (current-error-port))
-                (newline (current-error-port))
-                (exit #f)))
-       (call-with-current-directory (git-top-level)
-         (lambda ()
-           (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
-             ;; Create hidden tissue directory unless it exists.
-             (unless (file-exists? %state-directory)
-               (mkdir %state-directory))
-             ;; Ensure index exists rebuilding it if it is stale.
-             (let ((current-head
-                    (oid->string (reference-name->oid
-                                  (current-git-repository) "HEAD"))))
-               (unless (and (file-exists? %xapian-index)
-                            (string=? (call-with-database %xapian-index
-                                        (cut Database-get-metadata <> "commit"))
-                                      current-head))
-                 (guard (c (else (delete-xapian-index)
-                                 (display "Building xapian index failed."
-                                          (current-error-port))
-                                 (raise c)))
-                   (delete-xapian-index)
-                   (call-with-writable-database %xapian-index
-                     (lambda (db)
-                       (for-each (lambda (indexed-document)
-                                   (let* ((document (slot-set ((indexed-document-reader indexed-document))
-                                                              'web-uri
-                                                              (indexed-document-web-uri indexed-document)))
-                                          (term-generator (document-term-generator document)))
-                                     (index-text! term-generator (document-type document) #:prefix "XT")
-                                     (replace-document! db
-                                                        (document-id-term document)
-                                                        (TermGenerator-get-document term-generator))))
-                                 (tissue-configuration-indexed-documents (load-config)))
-                       (WritableDatabase-set-metadata db "commit" current-head))))))
-             ;; Handle sub-command.
-             (apply (match command
-                      ("search" tissue-search)
-                      ("show" tissue-show)
-                      ("repl" tissue-repl)
-                      ("web" tissue-web)
-                      ("index" tissue-index)
-                      (invalid-command
-                       (format (current-error-port) "Invalid command `~a'~%~%"
-                               invalid-command)
-                       (print-usage)
-                       (exit #f)))
-                    args))))))
+     (call-with-current-directory (git-top-level)
+       (lambda ()
+         (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
+           ;; Create hidden tissue directory unless it exists.
+           (unless (file-exists? %state-directory)
+             (mkdir %state-directory))
+           ;; Ensure index exists rebuilding it if it is stale.
+           (let ((current-head
+                  (oid->string (reference-name->oid
+                                (current-git-repository) "HEAD"))))
+             (unless (and (file-exists? %xapian-index)
+                          (string=? (call-with-database %xapian-index
+                                      (cut Database-get-metadata <> "commit"))
+                                    current-head))
+               (guard (c (else (delete-xapian-index)
+                               (display "Building xapian index failed."
+                                        (current-error-port))
+                               (raise c)))
+                 (delete-xapian-index)
+                 (call-with-writable-database %xapian-index
+                   (lambda (db)
+                     (for-each (lambda (indexed-document)
+                                 (let* ((document (slot-set ((indexed-document-reader indexed-document))
+                                                            'web-uri
+                                                            (indexed-document-web-uri indexed-document)))
+                                        (term-generator (document-term-generator document)))
+                                   (index-text! term-generator (document-type document) #:prefix "XT")
+                                   (replace-document! db
+                                                      (document-id-term document)
+                                                      (TermGenerator-get-document term-generator))))
+                               (tissue-configuration-indexed-documents (load-config)))
+                     (WritableDatabase-set-metadata db "commit" current-head))))))
+           ;; Handle sub-command.
+           (apply (match command
+                    ("search" tissue-search)
+                    ("show" tissue-show)
+                    ("repl" tissue-repl)
+                    ("web" tissue-web)
+                    ("index" tissue-index)
+                    (invalid-command
+                     (format (current-error-port) "Invalid command `~a'~%~%"
+                             invalid-command)
+                     (print-usage)
+                     (exit #f)))
+                  args)))))
     ;; tissue is an alias for `tissue search'
     ((_)
      (main "tissue" "search"))))
