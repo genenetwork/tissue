@@ -312,76 +312,72 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
          (() name)))
    (else name)))
 
-(define (file-details file)
-  "Return a hashtable of details extracted from gemini FILE."
+(define (file-details port)
+  "Return a hashtable of details extracted from input PORT reading a
+gemtext file."
   (let ((result (make-eq-hashtable)))
-    ;; Files may be renamed or deleted, but not committed. Therefore,
-    ;; only read the file if it exists.
-    (when (file-exists? file)
-      (call-with-input-file file
-	(lambda (port)
-          (port-transduce (tmap (lambda (line)
-                                  (cond
-                                   ;; Checkbox lists are tasks. If the
-                                   ;; checkbox has any character other
-                                   ;; than space in it, the task is
-                                   ;; completed.
-                                   ((string-match "^\\* \\[(.)\\]" line)
-                                    => (lambda (m)
-					 (hashtable-update! result 'tasks 1+ 0)
-					 (unless (string=? (match:substring m 1) " ")
-                                           (hashtable-update! result 'completed-tasks 1+ 0))))
-                                   ((let ((alist (list-line->alist line)))
-                                      (and alist
-                                           ;; Every value string is 2
-                                           ;; words or less.
-                                           (every (match-lambda
-                                                    ((_ . values)
-                                                     (every (cut <=n-words? <> 2)
-                                                            values)))
-                                                  alist)
-                                           alist))
-                                    => (lambda (alist)
-                                         ;; Insert values based on
-                                         ;; their keys.
-                                         (for-each (match-lambda
-                                                     (((or 'assign 'assigned) . values)
-                                                      (hashtable-append! result 'assigned
-                                                                         (map (cut resolve-alias <> (%aliases))
-                                                                              values)))
-                                                     (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
-                                                      (hashtable-append! result 'keywords values))
-                                                     (_ #t))
-                                                   alist)))
-                                   ;; A more fuzzy heuristic to find keywords
-                                   ((and (string-prefix? "* " line)
-					 ;; Is every comma-separated
-					 ;; element two words utmost?
-					 (every (cut <=n-words? <> 2)
-						(comma-split (remove-prefix "* " line)))
-					 ;; Does any comma-separated
-					 ;; element contain a potential
-					 ;; keyword?
-					 (any (lambda (element)
-						(any (lambda (keyword)
-						       (string-contains element keyword))
-						     (list "request" "bug" "critical"
-                                                           "enhancement" "progress"
-                                                           "testing" "later" "documentation"
-                                                           "help" "closed")))
-					      (comma-split (remove-prefix "* " line))))
-                                    (hashtable-append! result 'keywords
-						       (comma-split
-							(remove-prefix "* " line))))
-                                   ;; The first level one heading is the
-                                   ;; title.
-                                   ((string-prefix? "# " line)
-                                    (unless (hashtable-contains? result 'title)
-				      (hashtable-set! result 'title
-						      (remove-prefix "# " line)))))))
-                          (const #t)
-                          get-line-dos-or-unix
-                          port))))
+    (port-transduce (tmap (lambda (line)
+                            (cond
+                             ;; Checkbox lists are tasks. If the
+                             ;; checkbox has any character other
+                             ;; than space in it, the task is
+                             ;; completed.
+                             ((string-match "^\\* \\[(.)\\]" line)
+                              => (lambda (m)
+				   (hashtable-update! result 'tasks 1+ 0)
+				   (unless (string=? (match:substring m 1) " ")
+                                     (hashtable-update! result 'completed-tasks 1+ 0))))
+                             ((let ((alist (list-line->alist line)))
+                                (and alist
+                                     ;; Every value string is 2
+                                     ;; words or less.
+                                     (every (match-lambda
+                                              ((_ . values)
+                                               (every (cut <=n-words? <> 2)
+                                                      values)))
+                                            alist)
+                                     alist))
+                              => (lambda (alist)
+                                   ;; Insert values based on
+                                   ;; their keys.
+                                   (for-each (match-lambda
+                                               (((or 'assign 'assigned) . values)
+                                                (hashtable-append! result 'assigned
+                                                                   (map (cut resolve-alias <> (%aliases))
+                                                                        values)))
+                                               (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
+                                                (hashtable-append! result 'keywords values))
+                                               (_ #t))
+                                             alist)))
+                             ;; A more fuzzy heuristic to find keywords
+                             ((and (string-prefix? "* " line)
+				   ;; Is every comma-separated
+				   ;; element two words utmost?
+				   (every (cut <=n-words? <> 2)
+					  (comma-split (remove-prefix "* " line)))
+				   ;; Does any comma-separated
+				   ;; element contain a potential
+				   ;; keyword?
+				   (any (lambda (element)
+					  (any (lambda (keyword)
+						 (string-contains element keyword))
+					       (list "request" "bug" "critical"
+                                                     "enhancement" "progress"
+                                                     "testing" "later" "documentation"
+                                                     "help" "closed")))
+					(comma-split (remove-prefix "* " line))))
+                              (hashtable-append! result 'keywords
+						 (comma-split
+						  (remove-prefix "* " line))))
+                             ;; The first level one heading is the
+                             ;; title.
+                             ((string-prefix? "# " line)
+                              (unless (hashtable-contains? result 'title)
+				(hashtable-set! result 'title
+						(remove-prefix "# " line)))))))
+                    (const #t)
+                    get-line-dos-or-unix
+                    port)
     result))
 
 (define file-modification-table-for-current-repository
@@ -390,7 +386,8 @@ in (tissue tissue). If no alias is found, NAME is returned as such."
 
 (define (read-gemtext-issue file)
   "Read issue from gemtext FILE. Return an <issue> object."
-  (let* ((file-details (file-details file))
+  (let* ((file-details (call-with-file-in-git (current-git-repository) file
+                         file-details))
          ;; Downcase keywords to make them
          ;; case-insensitive.
          (all-keywords (map string-downcase

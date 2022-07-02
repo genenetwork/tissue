@@ -30,6 +30,7 @@
   #:use-module (skribilo reader)
   #:use-module (web uri)
   #:use-module (tissue conditions)
+  #:use-module (tissue git)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
   #:export (%project-name
@@ -72,12 +73,8 @@ NEW-EXTENSION."
 passed two arguments---the input port to read from and the output port
 to write to."
   (lambda (out)
-    ;; Files may be renamed or deleted, but not committed. Therefore,
-    ;; raise an exception if the file does not exist.
-    (if (file-exists? file)
-        (call-with-input-file file
-          (cut proc <> out))
-        (raise (issue-file-not-found-error file)))))
+    (call-with-file-in-git (current-git-repository) file
+      (cut proc <> out))))
 
 (define (copier file)
   "Return a writer function that copies FILE."

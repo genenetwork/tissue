@@ -28,6 +28,7 @@
   #:use-module (oop goops)
   #:use-module (term ansi-color)
   #:use-module (xapian xapian)
+  #:use-module (tissue git)
   #:use-module (tissue utils)
   #:export (slot-set
             object->scm
@@ -163,7 +164,7 @@ and further text, increase-termpos! must be called before indexing."
 
 (define-method (document-text (document <file-document>))
   "Return the full text of DOCUMENT."
-  (call-with-input-file (file-document-path document)
+  (call-with-file-in-git (current-git-repository) (file-document-path document)
     get-string-all))
 
 (define-method (document-term-generator (document <file-document>))
@@ -255,7 +256,7 @@ a list of search results."
 (define (read-gemtext-document file)
   "Reade gemtext document from FILE. Return a <file-document> object."
   (make <file-document>
-    #:title (or (call-with-input-file file
+    #:title (or (call-with-file-in-git (current-git-repository) file
                   (lambda (port)
                     (port-transduce (tfilter-map (lambda (line)
                                                    ;; The first level one

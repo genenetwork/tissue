@@ -99,57 +99,54 @@ Show the text of FILE.
 "
              (command-line-program)))
     ((file)
-     ;; Files may be renamed or deleted, but not committed. Therefore,
-     ;; only read the file if it exists.
-     (if (file-exists? file)
-         (call-with-input-file file
-           (lambda (port)
-             (port-transduce
-              (compose
-               ;; Detect preformatted text blocks.
-               (tfold (match-lambda*
-                        (((pre? . _) line)
-                         (cons (if (string-prefix? "```" line)
-                                   (not pre?)
-                                   pre?)
-                               line)))
-                      (cons #f #f))
-               (tmap (lambda (pre?+line)
-                       (match pre?+line
-                         ((pre? . line)
-                          (cond
-                           ;; Print headlines in bold.
-                           ((string-prefix? "#" line)
-                            (display (colorize-string line 'BOLD)))
-                           ;; Print lists in cyan.
-                           ((string-prefix? "*" line)
-                            (display (colorize-string line 'CYAN)))
-                           ;; Print links in cyan, but only the actual
-                           ;; link, and not the => prefix or the label.
-                           ((string-match "^(=>[ \t]*)([^ ]*)([^\n]*)" line)
-                            => (lambda (m)
-                                 (display (match:substring m 1))
-                                 (display (colorize-string (match:substring m 2) 'CYAN))
-                                 (display (match:substring m 3))))
-                           ;; Print preformatted text backticks in
-                           ;; magenta.
-                           ((string-prefix? "```" line)
-                            (display (colorize-string line 'MAGENTA)))
-                           (else
-                            ;; If part of preformatted block, print in
-                            ;; magenta. Else, print in default color.
-                            (display (if pre? (colorize-string line 'MAGENTA) line))))))
-                       (newline))))
-              (const #t)
-              get-line-dos-or-unix
-              port)))
-         (raise (issue-file-not-found-error file))))))
+     (call-with-file-in-git (current-git-repository) file
+       (lambda (port)
+         (port-transduce
+          (compose
+           ;; Detect preformatted text blocks.
+           (tfold (match-lambda*
+                    (((pre? . _) line)
+                     (cons (if (string-prefix? "```" line)
+                               (not pre?)
+                               pre?)
+                           line)))
+                  (cons #f #f))
+           (tmap (lambda (pre?+line)
+                   (match pre?+line
+                     ((pre? . line)
+                      (cond
+                       ;; Print headlines in bold.
+                       ((string-prefix? "#" line)
+                        (display (colorize-string line 'BOLD)))
+                       ;; Print lists in cyan.
+                       ((string-prefix? "*" line)
+                        (display (colorize-string line 'CYAN)))
+                       ;; Print links in cyan, but only the actual
+                       ;; link, and not the => prefix or the label.
+                       ((string-match "^(=>[ \t]*)([^ ]*)([^\n]*)" line)
+                        => (lambda (m)
+                             (display (match:substring m 1))
+                             (display (colorize-string (match:substring m 2) 'CYAN))
+                             (display (match:substring m 3))))
+                       ;; Print preformatted text backticks in
+                       ;; magenta.
+                       ((string-prefix? "```" line)
+                        (display (colorize-string line 'MAGENTA)))
+                       (else
+                        ;; If part of preformatted block, print in
+                        ;; magenta. Else, print in default color.
+                        (display (if pre? (colorize-string line 'MAGENTA) line))))))
+                   (newline))))
+          (const #t)
+          get-line-dos-or-unix
+          port))))))
 
 (define load-config
   (memoize-thunk
    (lambda ()
      "Load configuration and return <tissue-configuration> object."
-     (load (canonicalize-path "tissue.scm")))))
+     (call-with-file-in-git (current-git-repository) "tissue.scm"
+       (compose eval-string get-string-all)))))
 
 (define tissue-repl
   (match-lambda*
