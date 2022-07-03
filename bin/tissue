@@ -140,12 +140,10 @@ Show the text of FILE.
           get-line-dos-or-unix
           port))))))
 
-(define load-config
-  (memoize-thunk
-   (lambda ()
-     "Load configuration and return <tissue-configuration> object."
-     (call-with-file-in-git (current-git-repository) "tissue.scm"
-       (compose eval-string get-string-all)))))
+(define* (load-config)
+  "Load configuration and return <tissue-configuration> object."
+  (call-with-file-in-git (current-git-repository) "tissue.scm"
+    (compose eval-string get-string-all)))
 
 (define tissue-repl
   (match-lambda*
@@ -180,11 +178,12 @@ Export the repository as a website to OUTPUT-DIRECTORY.
 "
              (command-line-program)))
     ((output-directory)
-     (parameterize ((%project-name (tissue-configuration-project (load-config))))
-       (build-website (getcwd)
-                      output-directory
-                      (tissue-configuration-web-css (load-config))
-                      (tissue-configuration-web-files (load-config)))))))
+     (let ((config (load-config)))
+       (parameterize ((%project-name (tissue-configuration-project config)))
+         (build-website (getcwd)
+                        output-directory
+                        (tissue-configuration-web-css config)
+                        (tissue-configuration-web-files config)))))))
 
 (define (listen->socket-address listen)
   "Convert LISTEN specification to a socket address."
@@ -315,49 +314,50 @@ top-level of the git repository."
     ((_ command args ...)
      (call-with-current-directory (git-top-level)
        (lambda ()
-         (parameterize ((%aliases (tissue-configuration-aliases (load-config))))
-           ;; Create hidden tissue directory unless it exists.
-           (unless (file-exists? %state-directory)
-             (mkdir %state-directory))
-           ;; Ensure index exists rebuilding it if it is stale.
-           (let ((current-head
-                  (oid->string (reference-name->oid
-                                (current-git-repository) "HEAD"))))
-             (unless (and (file-exists? %xapian-index)
-                          (string=? (call-with-database %xapian-index
-                                      (cut Database-get-metadata <> "commit"))
-                                    current-head))
-               (guard (c (else (delete-xapian-index)
-                               (display "Building xapian index failed."
-                                        (current-error-port))
-                               (raise c)))
-                 (delete-xapian-index)
-                 (call-with-writable-database %xapian-index
-                   (lambda (db)
-                     (for-each (lambda (indexed-document)
-                                 (let* ((document (slot-set ((indexed-document-reader indexed-document))
-                                                            'web-uri
-                                                            (indexed-document-web-uri indexed-document)))
-                                        (term-generator (document-term-generator document)))
-                                   (index-text! term-generator (document-type document) #:prefix "XT")
-                                   (replace-document! db
-                                                      (document-id-term document)
-                                                      (TermGenerator-get-document term-generator))))
-                               (tissue-configuration-indexed-documents (load-config)))
-                     (WritableDatabase-set-metadata db "commit" current-head))))))
-           ;; Handle sub-command.
-           (apply (match command
-                    ("search" tissue-search)
-                    ("show" tissue-show)
-                    ("repl" tissue-repl)
-                    ("web" tissue-web)
-                    ("index" tissue-index)
-                    (invalid-command
-                     (format (current-error-port) "Invalid command `~a'~%~%"
-                             invalid-command)
-                     (print-usage)
-                     (exit #f)))
-                  args)))))
+         (let ((config (load-config)))
+           (parameterize ((%aliases (tissue-configuration-aliases config)))
+             ;; Create hidden tissue directory unless it exists.
+             (unless (file-exists? %state-directory)
+               (mkdir %state-directory))
+             ;; Ensure index exists rebuilding it if it is stale.
+             (let ((current-head
+                    (oid->string (reference-name->oid
+                                  (current-git-repository) "HEAD"))))
+               (unless (and (file-exists? %xapian-index)
+                            (string=? (call-with-database %xapian-index
+                                        (cut Database-get-metadata <> "commit"))
+                                      current-head))
+                 (guard (c (else (delete-xapian-index)
+                                 (display "Building xapian index failed."
+                                          (current-error-port))
+                                 (raise c)))
+                   (delete-xapian-index)
+                   (call-with-writable-database %xapian-index
+                     (lambda (db)
+                       (for-each (lambda (indexed-document)
+                                   (let* ((document (slot-set ((indexed-document-reader indexed-document))
+                                                              'web-uri
+                                                              (indexed-document-web-uri indexed-document)))
+                                          (term-generator (document-term-generator document)))
+                                     (index-text! term-generator (document-type document) #:prefix "XT")
+                                     (replace-document! db
+                                                        (document-id-term document)
+                                                        (TermGenerator-get-document term-generator))))
+                                 (tissue-configuration-indexed-documents config))
+                       (WritableDatabase-set-metadata db "commit" current-head))))))
+             ;; Handle sub-command.
+             (apply (match command
+                      ("search" tissue-search)
+                      ("show" tissue-show)
+                      ("repl" tissue-repl)
+                      ("web" tissue-web)
+                      ("index" tissue-index)
+                      (invalid-command
+                       (format (current-error-port) "Invalid command `~a'~%~%"
+                               invalid-command)
+                       (print-usage)
+                       (exit #f)))
+                    args))))))
     ;; tissue is an alias for `tissue search'
     ((_)
      (main "tissue" "search"))))
