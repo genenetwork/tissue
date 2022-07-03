@@ -225,7 +225,10 @@ Run a web search service reading configuration from CONFIG-FILE.
                             (list (option '("listen-repl")
                                           #t #f
                                           (lambda (opt name arg result)
-                                            (acons 'listen-repl arg result))))
+                                            (acons 'listen-repl
+                                                   (or (string->number arg)
+                                                       arg)
+                                                   result))))
                             invalid-option
                             (lambda (config-file result)
                               (append (call-with-input-file config-file
@@ -243,9 +246,9 @@ Run a web search service reading configuration from CONFIG-FILE.
                            (make-unix-domain-server-socket #:path listen-repl))
                           (else
                            (format (current-error-port)
-                                   "REPL server listening on ~a~%"
+                                   "REPL server listening on port ~a~%"
                                    listen-repl)
-                           (make-unix-domain-server-socket #:path listen-repl))))))
+                           (make-tcp-server-socket #:port listen-repl))))))
        (start-web-server (listen->socket-address (assq-ref args 'listen))
                          (map (match-lambda
                                 ((name parameters ...)
