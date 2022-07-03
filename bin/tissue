@@ -295,15 +295,14 @@ To get usage information for one of these sub-commands, run
           (command-line-program)
           (command-line-program)))
 
-(define (delete-xapian-index)
-  "Delete xapian index if it exists. Current directory must be at the
-top-level of the git repository."
-  (when (file-exists? %xapian-index)
+(define (delete-directory directory)
+  "Delete DIRECTORY, and the contained files, it if it exists."
+  (when (file-exists? directory)
     (for-each (lambda (file)
-                (delete-file (string-append %xapian-index "/" file)))
-              (scandir %xapian-index
+                (delete-file (string-append directory "/" file)))
+              (scandir directory
                        (negate (cut member <> (list "." "..")))))
-    (rmdir %xapian-index)))
+    (rmdir directory)))
 
 (define main
   (match-lambda*
@@ -327,11 +326,11 @@ top-level of the git repository."
                             (string=? (call-with-database %xapian-index
                                         (cut Database-get-metadata <> "commit"))
                                       current-head))
-                 (guard (c (else (delete-xapian-index)
+                 (guard (c (else (delete-directory %xapian-index)
                                  (display "Building xapian index failed."
                                           (current-error-port))
                                  (raise c)))
-                   (delete-xapian-index)
+                   (delete-directory %xapian-index)
                    (call-with-writable-database %xapian-index
                      (lambda (db)
                        (for-each (lambda (indexed-document)
