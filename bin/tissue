@@ -238,7 +238,7 @@ Run a web search service reading configuration from CONFIG-FILE.
            (spawn-server (cond
                           ((string? listen-repl)
                            (format (current-error-port)
-                                   "REPL server listening on port ~a~%"
+                                   "REPL server listening on ~a~%"
                                    listen-repl)
                            (make-unix-domain-server-socket #:path listen-repl))
                           (else
