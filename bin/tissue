@@ -304,6 +304,34 @@ To get usage information for one of these sub-commands, run
                        (negate (cut member <> (list "." "..")))))
     (rmdir directory)))
 
+(define (index db-path)
+  "Index current repository into xapian database at DB-PATH. If DB-PATH
+already exists and is up to date, do nothing."
+  (let ((current-head
+         (oid->string (reference-name->oid (current-git-repository) "HEAD"))))
+    (unless (and (file-exists? db-path)
+                 (string=? (call-with-database db-path
+                             (cut Database-get-metadata <> "commit"))
+                           current-head))
+      (guard (c (else (delete-directory db-path)
+                      (format (current-error-port)
+                              "Building xapian index failed.~%")
+                      (raise c)))
+        (delete-directory db-path)
+        (call-with-writable-database db-path
+          (lambda (db)
+            (for-each (lambda (indexed-document)
+                        (let* ((document (slot-set ((indexed-document-reader indexed-document))
+                                                   'web-uri
+                                                   (indexed-document-web-uri indexed-document)))
+                               (term-generator (document-term-generator document)))
+                          (index-text! term-generator (document-type document) #:prefix "XT")
+                          (replace-document! db
+                                             (document-id-term document)
+                                             (TermGenerator-get-document term-generator))))
+                      (tissue-configuration-indexed-documents (load-config)))
+            (WritableDatabase-set-metadata db "commit" current-head)))))))
+
 (define main
   (match-lambda*
     ((_ (or "-h" "--help"))
@@ -318,32 +346,8 @@ To get usage information for one of these sub-commands, run
              ;; Create hidden tissue directory unless it exists.
              (unless (file-exists? %state-directory)
                (mkdir %state-directory))
-             ;; Ensure index exists rebuilding it if it is stale.
-             (let ((current-head
-                    (oid->string (reference-name->oid
-                                  (current-git-repository) "HEAD"))))
-               (unless (and (file-exists? %xapian-index)
-                            (string=? (call-with-database %xapian-index
-                                        (cut Database-get-metadata <> "commit"))
-                                      current-head))
-                 (guard (c (else (delete-directory %xapian-index)
-                                 (display "Building xapian index failed."
-                                          (current-error-port))
-                                 (raise c)))
-                   (delete-directory %xapian-index)
-                   (call-with-writable-database %xapian-index
-                     (lambda (db)
-                       (for-each (lambda (indexed-document)
-                                   (let* ((document (slot-set ((indexed-document-reader indexed-document))
-                                                              'web-uri
-                                                              (indexed-document-web-uri indexed-document)))
-                                          (term-generator (document-term-generator document)))
-                                     (index-text! term-generator (document-type document) #:prefix "XT")
-                                     (replace-document! db
-                                                        (document-id-term document)
-                                                        (TermGenerator-get-document term-generator))))
-                                 (tissue-configuration-indexed-documents config))
-                       (WritableDatabase-set-metadata db "commit" current-head))))))
+             ;; Ensure index exists, rebuilding it if it is stale.
+             (index %xapian-index)
              ;; Handle sub-command.
              (apply (match command
                       ("search" tissue-search)
