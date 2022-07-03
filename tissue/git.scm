@@ -46,8 +46,7 @@
       diff)))
 
 (define (git-top-level)
-  "Return the top-level directory of the current git
-repository."
+  "Return the top-level directory of the current git repository."
   (let loop ((curdir (getcwd)))
     (cond
      ((file-exists? (string-append curdir "/.git"))
