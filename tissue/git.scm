@@ -28,13 +28,15 @@
   #:use-module (git)
   #:use-module (git types)
   #:use-module ((system foreign) #:select (%null-pointer))
+  #:use-module (bytestructures guile)
   #:use-module (tissue utils)
   #:export (git-top-level
             current-git-repository
             commit-date
             git-tracked-files
             call-with-file-in-git
-            file-modification-table))
+            file-modification-table
+            clone-options))
 
 ;; We bind additional functions from libgit2 that are not already
 ;; bound in guile-git. TODO: Contribute them to guile-git.
@@ -138,3 +140,11 @@ that modified them."
      #f
      repository)
     result))
+
+(define* (clone-options #:key bare?)
+  (let ((clone-options (make-clone-options)))
+    (bytestructure-set!
+     (clone-options-bytestructure clone-options)
+     'bare
+     (if bare? 1 0))
+    clone-options))
