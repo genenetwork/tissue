@@ -27,10 +27,12 @@
   #:use-module (ice-9 match)
   #:use-module (git)
   #:use-module (git types)
-  #:use-module ((system foreign) #:select (%null-pointer))
+  #:use-module ((system foreign) #:select (%null-pointer
+                                           pointer->string))
   #:use-module (bytestructures guile)
   #:use-module (tissue utils)
-  #:export (git-top-level
+  #:export (reference-symbolic-target
+            git-top-level
             %current-git-repository
             current-git-repository
             commit-date
@@ -47,6 +49,12 @@
     (lambda (diff)
       (proc (diff->pointer diff) %null-pointer)
       diff)))
+
+(define reference-symbolic-target
+  (let ((proc (libgit2->procedure '* "git_reference_symbolic_target" '(*))))
+    (lambda (reference)
+      (pointer->string
+       (proc (reference->pointer reference))))))
 
 (define %current-git-repository
   (make-parameter #f))
