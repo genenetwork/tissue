@@ -31,6 +31,7 @@
   #:use-module (bytestructures guile)
   #:use-module (tissue utils)
   #:export (git-top-level
+            %current-git-repository
             current-git-repository
             commit-date
             git-tracked-files
@@ -47,9 +48,15 @@
       (proc (diff->pointer diff) %null-pointer)
       diff)))
 
+(define %current-git-repository
+  (make-parameter #f))
+
 (define (current-git-repository)
-  "Return the current git repository."
-  (repository-open-ext (getcwd) (list)))
+  "Return the current git repository, either the repository specified by
+the %current-git-repository parameter or the repository at the current
+directory."
+  (or (%current-git-repository)
+      (repository-open-ext (getcwd) (list))))
 
 (define (git-top-level)
   "Return the top-level directory of the current git repository."
