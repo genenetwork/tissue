@@ -28,10 +28,13 @@
   #:use-module (git)
   #:use-module (git types)
   #:use-module ((system foreign) #:select (%null-pointer
-                                           pointer->string))
+                                           dereference-pointer
+                                           pointer->string
+                                           string->pointer))
   #:use-module (bytestructures guile)
   #:use-module (tissue utils)
-  #:export (reference-symbolic-target
+  #:export (reference-set-target!
+            reference-symbolic-target
             git-top-level
             %current-git-repository
             current-git-repository
@@ -49,6 +52,18 @@
     (lambda (diff)
       (proc (diff->pointer diff) %null-pointer)
       diff)))
+
+(define reference-set-target!
+  (let ((proc (libgit2->procedure* "git_reference_set_target" '(* * * *))))
+    (lambda* (reference oid #:optional log-message)
+      (let ((out (make-double-pointer)))
+        (proc out
+              (reference->pointer reference)
+              (oid->pointer oid)
+              (if log-message
+                  (string->pointer log-message)
+                  %null-pointer))
+        (pointer->reference (dereference-pointer out))))))
 
 (define reference-symbolic-target
   (let ((proc (libgit2->procedure '* "git_reference_symbolic_target" '(*))))
