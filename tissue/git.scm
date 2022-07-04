@@ -47,20 +47,13 @@
       (proc (diff->pointer diff) %null-pointer)
       diff)))
 
-(define (git-top-level)
-  "Return the top-level directory of the current git repository."
-  (let loop ((curdir (getcwd)))
-    (cond
-     ((file-exists? (string-append curdir "/.git"))
-      curdir)
-     ((string=? curdir "/")
-      (error "No git top level found"))
-     (else
-      (loop (dirname curdir))))))
-
 (define (current-git-repository)
   "Return the current git repository."
   (repository-open-ext (getcwd) (list)))
+
+(define (git-top-level)
+  "Return the top-level directory of the current git repository."
+  (dirname (repository-directory (current-git-repository))))
 
 (define (head-tree repository)
   "Return tree of HEAD in REPOSITORY."
