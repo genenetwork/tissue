@@ -60,7 +60,7 @@
 
 (define (current-git-repository)
   "Return the current git repository."
-  (repository-open (git-top-level)))
+  (repository-open-ext (getcwd) (list)))
 
 (define (head-tree repository)
   "Return tree of HEAD in REPOSITORY."
