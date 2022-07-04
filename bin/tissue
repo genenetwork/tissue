@@ -260,12 +260,14 @@ Run a web search service reading configuration from CONFIG-FILE.
                          (map (match-lambda
                                 ((name parameters ...)
                                  ;; Set CSS for each host.
-                                 (call-with-current-directory (assq-ref parameters 'indexed-repository)
-                                   (lambda ()
-                                     (cons name
-                                           (acons 'css
-                                                  (tissue-configuration-web-css (load-config))
-                                                  parameters))))))
+                                 (parameterize ((%current-git-repository
+                                                 (repository-open
+                                                  (string-append (assq-ref args 'state-directory)
+                                                                 "/" name "/repository"))))
+                                   (cons name
+                                         (acons 'css
+                                                (tissue-configuration-web-css (load-config))
+                                                parameters)))))
                               (or (assq-ref args 'hosts)
                                   ;; Assume current directory as default.
                                   `(("localhost"
