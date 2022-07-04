@@ -25,6 +25,7 @@
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-28)
   #:use-module (srfi srfi-171)
+  #:use-module (ice-9 filesystem)
   #:use-module (skribilo engine)
   #:use-module (skribilo evaluator)
   #:use-module (skribilo reader)
@@ -52,14 +53,6 @@
   file?
   (name file-name)
   (writer file-writer))
-
-(define (mkdir-p directory)
-  "Create DIRECTORY and all its parents."
-  (unless (or (string=? directory "/")
-              (string=? directory "."))
-    (mkdir-p (dirname directory)))
-  (unless (file-exists? directory)
-    (mkdir directory)))
 
 (define (replace-extension file new-extension)
   "Return a new filename where the extension of FILE is replaced with
@@ -116,7 +109,6 @@ original current directory."
                   thunk
                   (cut chdir previous-current-directory))))
 
-;; TODO: Use guile-filesystem.
 (define* (build-website repository-top-level output-directory css files)
   "Export git repository with REPOSITORY-TOP-LEVEL to OUTPUT-DIRECTORY
 as a website.
@@ -134,14 +126,14 @@ the web output."
   (when css
     (engine-custom-set! (find-engine 'html) 'css css))
   ;; Create output directory.
-  (mkdir-p output-directory)
+  (make-directories output-directory)
   ;; Write each of the <file> objects.
   (for-each (lambda (file)
               (let ((output-file
                      (string-append output-directory "/" (file-name file))))
                 (display output-file (current-error-port))
                 (newline (current-error-port))
-                (mkdir-p (dirname output-file))
+                (make-directories (dirname output-file))
                 (call-with-output-file output-file
                   (lambda (port)
                     (with-current-directory repository-top-level
