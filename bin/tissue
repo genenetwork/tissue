@@ -287,6 +287,7 @@ COMMAND must be one of the sub-commands listed below:
   repl      run a Guile script in a tissue environment
   web       export repository as website
   run-web   run a web search service
+  pull      pull latest from upstream repositories
   index     index files
 
 To get usage information for one of these sub-commands, run
@@ -324,10 +325,136 @@ already exists and is up to date, do nothing."
                       (tissue-configuration-indexed-documents (load-config)))
             (WritableDatabase-set-metadata db "commit" current-head)))))))
 
+(define (pull state-directory hostname upstream-repository)
+  "Pull latest from UPSTREAM-REPOSITORY into STATE-DIRECTORY for
+HOSTNAME."
+  (format (current-error-port)
+          "Processing host ~a~%" hostname)
+  (call-with-current-directory state-directory
+    (lambda ()
+      ;; Create host directory if it does not exist.
+      (unless (file-exists? hostname)
+        (mkdir hostname))
+      (call-with-current-directory hostname
+        (lambda ()
+          (let ((repository-directory "repository"))
+            (parameterize ((%current-git-repository
+                            (if (file-exists? repository-directory)
+                                ;; Pull latest commits from remote if
+                                ;; repository is already cloned.
+                                (let ((repository (repository-open repository-directory)))
+                                  ;; Fetch from remote.
+                                  (remote-fetch (remote-lookup repository "origin"))
+                                  (let ((head (reference-symbolic-target
+                                               (reference-lookup repository "HEAD")))
+                                        (remote-head (reference-symbolic-target
+                                                      (reference-lookup repository
+                                                                        "refs/remotes/origin/HEAD"))))
+                                    (if (zero? (oid-cmp (reference-name->oid repository head)
+                                                        (reference-name->oid repository remote-head)))
+                                        ;; HEAD is already up to date
+                                        ;; with remote HEAD.
+                                        (format (current-error-port)
+                                                "~a is already up to date.~%"
+                                                (canonicalize-path repository-directory))
+                                        ;; Fast-forward local HEAD.
+                                        (begin
+                                          (reference-set-target!
+                                           (reference-lookup repository head)
+                                           (reference-name->oid repository remote-head))
+                                          (format (current-error-port)
+                                                  "Pulled latest changes from ~a into ~a~%"
+                                                  upstream-repository
+                                                  (canonicalize-path repository-directory)))))
+                                  repository)
+                                ;; Clone repository if it is not already.
+                                (begin
+                                  (let ((repository
+                                         (clone upstream-repository
+                                                repository-directory
+                                                (clone-options #:bare? #t))))
+                                    (format (current-error-port)
+                                            "Cloned ~a into ~a~%"
+                                            upstream-repository
+                                            (canonicalize-path repository-directory))
+                                    repository)))))
+              (let ((config (load-config)))
+                (parameterize ((%aliases (tissue-configuration-aliases config))
+                               (%project-name (tissue-configuration-project config)))
+                  ;; Index.
+                  (let ((xapian-directory "xapian"))
+                    (index xapian-directory)
+                    (format (current-error-port)
+                            "Indexed ~a at ~a~%"
+                            (canonicalize-path repository-directory)
+                            (canonicalize-path xapian-directory)))
+                  ;; Build website.
+                  (let ((website-directory "website"))
+                    (guard (c (else (format (current-error-port)
+                                            "Building website failed.~%")
+                                    (raise c)))
+                      (call-with-temporary-directory
+                       (lambda (temporary-output-directory)
+                         (build-website (git-top-level)
+                                        temporary-output-directory
+                                        (tissue-configuration-web-css config)
+                                        (tissue-configuration-web-files config)
+                                        #:log-port #f)
+                         (delete-file-recursively website-directory)
+                         (rename-file temporary-output-directory
+                                      website-directory))))
+                    (format (current-error-port)
+                            "Built website for ~a at ~a~%"
+                            hostname
+                            (canonicalize-path website-directory))))))))))))
+
+(define tissue-pull
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a pull [HOST]
+Pull latest from upstream repositories.
+
+  -C, --config=CONFIG-FILE    read configuration parameters from CONFIG-FILE
+"
+             (command-line-program)))
+    (args
+     (let ((args (args-fold args
+                            (list (option '(#\C "config")
+                                          #t #f
+                                          (lambda (opt name config-file result)
+                                            (append (call-with-input-file config-file
+                                                      read)
+                                                    result))))
+                            invalid-option
+                            (lambda (host result)
+                              (acons 'host host result))
+                            ;; Default configuration parameters
+                            '((state-directory . "/var/lib/tissue")
+                              (hosts . ())))))
+       (let ((state-directory (assq-ref args 'state-directory)))
+         ;; Error out if state directory does not exist.
+         (unless (file-exists? state-directory)
+           (format (current-error-port)
+                   "State directory ~a does not exist.~%"
+                   state-directory)
+           (exit #f))
+         ;; Pull state for specific host, or for all hosts when none
+         ;; are specified on the command-line.
+         (for-each (match-lambda
+                     ((hostname . parameters)
+                      (when (or (not (assq-ref args 'host))
+                                (string=? hostname (assq-ref args 'host)))
+                        (pull state-directory
+                              hostname
+                              (assq-ref parameters 'upstream-repository)))))
+                   (assq-ref args 'hosts)))))))
+
 (define main
   (match-lambda*
     ((_ (or "-h" "--help"))
      (print-usage))
+    ((_ "pull" args ...)
+     (apply tissue-pull args))
     ((_ "run-web" args ...)
      (apply tissue-run-web args))
     ((_ command args ...)
