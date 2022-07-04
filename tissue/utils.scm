@@ -20,10 +20,12 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
+  #:use-module (ice-9 filesystem)
   #:use-module (ice-9 popen)
   #:export (string-remove-prefix
             human-date-string
             call-with-current-directory
+            call-with-temporary-directory
             call-with-output-pipe
             get-line-dos-or-unix
             memoize-thunk))
@@ -59,6 +61,16 @@ directory after THUNK returns."
     (dynamic-wind (cut chdir curdir)
                   thunk
                   (cut chdir original-current-directory))))
+
+(define (call-with-temporary-directory proc)
+  "Call PROC with a new temporary directory, and delete it when PROC
+returns or exits non-locally."
+  (let ((temporary-directory (mkdtemp "XXXXXX")))
+    (dynamic-wind (const #t)
+                  (cut proc temporary-directory)
+                  (lambda ()
+                    (when (file-exists? temporary-directory)
+                      (delete-file-recursively temporary-directory))))))
 
 (define (call-with-output-pipe proc program . args)
   "Execute PROGRAM ARGS ... in a subprocess with a pipe to it. Call PROC
