@@ -28,6 +28,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (srfi srfi-37)
         (srfi srfi-171)
         (srfi srfi-171 gnu)
+        (ice-9 filesystem)
         (ice-9 ftw)
         (ice-9 match)
         (ice-9 popen)
@@ -295,15 +296,6 @@ To get usage information for one of these sub-commands, run
           (command-line-program)
           (command-line-program)))
 
-(define (delete-directory directory)
-  "Delete DIRECTORY, and the contained files, it if it exists."
-  (when (file-exists? directory)
-    (for-each (lambda (file)
-                (delete-file (string-append directory "/" file)))
-              (scandir directory
-                       (negate (cut member <> (list "." "..")))))
-    (rmdir directory)))
-
 (define (index db-path)
   "Index current repository into xapian database at DB-PATH. If DB-PATH
 already exists and is up to date, do nothing."
@@ -313,11 +305,11 @@ already exists and is up to date, do nothing."
                  (string=? (call-with-database db-path
                              (cut Database-get-metadata <> "commit"))
                            current-head))
-      (guard (c (else (delete-directory db-path)
+      (guard (c (else (delete-file-recursively db-path)
                       (format (current-error-port)
                               "Building xapian index failed.~%")
                       (raise c)))
-        (delete-directory db-path)
+        (delete-file-recursively db-path)
         (call-with-writable-database db-path
           (lambda (db)
             (for-each (lambda (indexed-document)
