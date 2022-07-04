@@ -22,6 +22,8 @@
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
+  #:use-module (srfi srfi-171)
+  #:use-module (ice-9 filesystem)
   #:use-module (ice-9 match)
   #:use-module (htmlprag)
   #:use-module (sxml simple)
@@ -168,6 +170,18 @@ operators "
            (string-split query #\&))
       '()))
 
+(define %mime-types
+  '(("gif" image/gif)
+    ("html" text/html)
+    ("jpeg" image/jpeg)
+    ("jpg" image/jpeg)
+    ("js" text/javascript)
+    ("json" application/json)
+    ("png" image/png)
+    ("pdf" application/pdf)
+    ("svg" image/svg+xml)
+    ("txt" text/plain)))
+
 (define (handler request body hosts state-directory)
   "Handle web REQUEST with BODY and return two values---the response
 headers and body.
@@ -189,6 +203,7 @@ STATE-DIRECTORY."
                     (repository-open
                      (string-append state-directory "/" hostname "/repository"))))
       (cond
+       ;; Search page
        ((member path (list "/" "/search"))
         (let ((search-query (or (assoc-ref parameters "query")
                                 "")))
@@ -212,6 +227,29 @@ STATE-DIRECTORY."
                           search-query
                           (MSet-get-matches-estimated mset)
                           (assq-ref host-parameters 'css)))))))))
+       ;; Static files
+       ((let ((file-path (string-append state-directory "/" hostname "/website" path)))
+          (and (file-exists? file-path)
+               ;; Check that the file really is within the document
+               ;; root.
+               (string-prefix? (string-append state-directory "/" hostname "/website/")
+                               (canonicalize-path file-path))
+               (canonicalize-path file-path)))
+        => (lambda (file-path)
+             (values `((content-type . ,(or (assoc-ref %mime-types (string-remove-prefix
+                                                                    "." (file-name-extension file-path)))
+                                            '(application/octet-stream))))
+                     ;; Return a procedure so that the file can be
+                     ;; read out a little at a time instead of having
+                     ;; to load it whole into memory.
+                     (lambda (out)
+                       (call-with-input-file file-path
+                         (lambda (in)
+                           (port-transduce (tmap (cut put-bytevector out <>))
+                                           (const #t)
+                                           get-bytevector-some
+                                           in)))))))
+       ;; Not found
        (else
         (values (build-response #:code 404)
                 (string-append "Resource not found: "
