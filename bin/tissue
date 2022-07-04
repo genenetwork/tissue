@@ -214,6 +214,15 @@ Export the repository as a website to OUTPUT-DIRECTORY.
                          (string->number
                           (substring listen (1+ (string-index-right listen #\:))))))))
 
+(define (default-configuration)
+  "Return the default configuration options for the `tissue pull' and
+`tissue run-web' subcommands."
+  `((listen . "127.0.0.1:8080")
+    (state-directory . "/var/lib/tissue")
+    ;; Assume current repository as default.
+    (hosts ("localhost"
+            (upstream-repository . ,(git-top-level))))))
+
 (define tissue-run-web
   (match-lambda*
     (("--help")
@@ -241,8 +250,7 @@ Run a web search service reading configuration from CONFIG-FILE.
                                                     result))))
                             invalid-option
                             unrecognized-argument
-                            ;; Default listen
-                            '((listen . "127.0.0.1:8080")))))
+                            (default-configuration))))
        (let ((listen-repl (assq-ref args 'listen-repl)))
          (when listen-repl
            (spawn-server (cond
@@ -268,10 +276,7 @@ Run a web search service reading configuration from CONFIG-FILE.
                                          (acons 'css
                                                 (tissue-configuration-web-css (load-config))
                                                 parameters)))))
-                              (or (assq-ref args 'hosts)
-                                  ;; Assume current directory as default.
-                                  `(("localhost"
-                                     (indexed-repository . ,(getcwd))))))
+                              (assq-ref args 'hosts))
                          (assq-ref args 'state-directory))))))
 
 ;; This is a noop, since the index is built on any tissue command. It
@@ -432,9 +437,7 @@ Pull latest from upstream repositories.
                             invalid-option
                             (lambda (host result)
                               (acons 'host host result))
-                            ;; Default configuration parameters
-                            '((state-directory . "/var/lib/tissue")
-                              (hosts . ())))))
+                            (default-configuration))))
        (let ((state-directory (assq-ref args 'state-directory)))
          ;; Error out if state directory does not exist.
          (unless (file-exists? state-directory)
