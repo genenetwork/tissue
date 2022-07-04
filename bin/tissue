@@ -298,32 +298,27 @@ To get usage information for one of these sub-commands, run
           (command-line-program)))
 
 (define (index db-path)
-  "Index current repository into xapian database at DB-PATH. If DB-PATH
-already exists and is up to date, do nothing."
-  (let ((current-head
-         (oid->string (reference-name->oid (current-git-repository) "HEAD"))))
-    (unless (and (file-exists? db-path)
-                 (string=? (call-with-database db-path
-                             (cut Database-get-metadata <> "commit"))
-                           current-head))
-      (guard (c (else (delete-file-recursively db-path)
-                      (format (current-error-port)
-                              "Building xapian index failed.~%")
-                      (raise c)))
-        (delete-file-recursively db-path)
-        (call-with-writable-database db-path
-          (lambda (db)
-            (for-each (lambda (indexed-document)
-                        (let* ((document (slot-set ((indexed-document-reader indexed-document))
-                                                   'web-uri
-                                                   (indexed-document-web-uri indexed-document)))
-                               (term-generator (document-term-generator document)))
-                          (index-text! term-generator (document-type document) #:prefix "XT")
-                          (replace-document! db
-                                             (document-id-term document)
-                                             (TermGenerator-get-document term-generator))))
-                      (tissue-configuration-indexed-documents (load-config)))
-            (WritableDatabase-set-metadata db "commit" current-head)))))))
+  "Index current repository into xapian database at DB-PATH."
+  (guard (c (else (delete-file-recursively db-path)
+                  (format (current-error-port)
+                          "Building xapian index failed.~%")
+                  (raise c)))
+    (delete-file-recursively db-path)
+    (call-with-writable-database db-path
+      (lambda (db)
+        (for-each (lambda (indexed-document)
+                    (let* ((document (slot-set ((indexed-document-reader indexed-document))
+                                               'web-uri
+                                               (indexed-document-web-uri indexed-document)))
+                           (term-generator (document-term-generator document)))
+                      (index-text! term-generator (document-type document) #:prefix "XT")
+                      (replace-document! db
+                                         (document-id-term document)
+                                         (TermGenerator-get-document term-generator))))
+                  (tissue-configuration-indexed-documents (load-config)))
+        (WritableDatabase-set-metadata
+         db "commit" (oid->string (reference-name->oid
+                                   (current-git-repository) "HEAD")))))))
 
 (define (pull state-directory hostname upstream-repository)
   "Pull latest from UPSTREAM-REPOSITORY into STATE-DIRECTORY for
@@ -466,7 +461,13 @@ Pull latest from upstream repositories.
              (unless (file-exists? %state-directory)
                (mkdir %state-directory))
              ;; Ensure index exists, rebuilding it if it is stale.
-             (index %xapian-index)
+             (let ((current-head
+                    (oid->string (reference-name->oid (current-git-repository) "HEAD"))))
+               (unless (and (file-exists? db-path)
+                            (string=? (call-with-database db-path
+                                        (cut Database-get-metadata <> "commit"))
+                                      current-head))
+                 (index %xapian-index)))
              ;; Handle sub-command.
              (apply (match command
                       ("search" tissue-search)
