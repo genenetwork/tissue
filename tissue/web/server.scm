@@ -17,6 +17,8 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (define-module (tissue web server)
+  #:use-module (rnrs conditions)
+  #:use-module (rnrs exceptions)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
@@ -177,11 +179,9 @@ STATE-DIRECTORY."
          (hostname (match (assq-ref (request-headers request) 'host)
                      ((hostname . _) hostname)))
          (host-parameters (or (assoc-ref hosts hostname)
-                              ;; If no matching host is found, pick the
-                              ;; first known host.
-                              (match hosts
-                                (((_ . host-parameters) _ ...)
-                                 host-parameters)))))
+                              (raise (condition
+                                      (make-message-condition "Unknown host")
+                                      (make-irritants-condition hostname))))))
     (format #t "~a ~a\n"
             (request-method request)
             path)
