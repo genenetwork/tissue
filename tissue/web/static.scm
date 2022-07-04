@@ -109,7 +109,8 @@ original current directory."
                   thunk
                   (cut chdir previous-current-directory))))
 
-(define* (build-website repository-top-level output-directory css files)
+(define* (build-website repository-top-level output-directory css files
+                        #:key (log-port (current-error-port)))
   "Export git repository with REPOSITORY-TOP-LEVEL to OUTPUT-DIRECTORY
 as a website.
 
@@ -121,7 +122,9 @@ issue listings are put. It must begin with a /. If it is #f, per-tag
 issue listings are not generated.
 
 FILES is a list of <file> objects representing files to be written to
-the web output."
+the web output.
+
+Log to LOG-PORT. When LOG-PORT is #f, do not log."
   ;; Set CSS.
   (when css
     (engine-custom-set! (find-engine 'html) 'css css))
@@ -131,8 +134,9 @@ the web output."
   (for-each (lambda (file)
               (let ((output-file
                      (string-append output-directory "/" (file-name file))))
-                (display output-file (current-error-port))
-                (newline (current-error-port))
+                (when log-port
+                  (display output-file log-port)
+                  (newline log-port))
                 (make-directories (dirname output-file))
                 (call-with-output-file output-file
                   (lambda (port)
