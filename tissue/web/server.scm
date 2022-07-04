@@ -28,12 +28,14 @@
   #:use-module (web response)
   #:use-module (web server)
   #:use-module (web uri)
+  #:use-module (git)
   #:use-module (xapian wrap)
   #:use-module ((xapian xapian) #:renamer (lambda (symbol)
                                             (case symbol
                                               ((parse-query) 'xapian:parse-query)
                                               (else symbol))))
   #:use-module (tissue document)
+  #:use-module (tissue git)
   #:use-module (tissue search)
   #:use-module (tissue utils)
   #:export (start-web-server))
@@ -164,62 +166,63 @@ operators "
            (string-split query #\&))
       '()))
 
-(define (handler request body hosts xapian-index)
+(define (handler request body hosts state-directory)
   "Handle web REQUEST with BODY and return two values---the response
 headers and body.
 
-See `start-web-server' for documentation of HOSTS and XAPIAN-INDEX."
-  (let ((path (uri-path (request-uri request)))
-        (parameters (query-parameters (uri-query (request-uri request))))
-        (host-parameters (or (assoc-ref hosts
-                                        (match (assq-ref (request-headers request) 'host)
-                                          ((hostname . _) hostname)))
-                             ;; If no matching host is found, pick the
-                             ;; first known host.
-                             (match hosts
-                               (((_ . host-parameters) _ ...)
-                                host-parameters)))))
+See `start-web-server' for documentation of HOSTS and
+STATE-DIRECTORY."
+  (let* ((path (uri-path (request-uri request)))
+         (parameters (query-parameters (uri-query (request-uri request))))
+         (hostname (match (assq-ref (request-headers request) 'host)
+                     ((hostname . _) hostname)))
+         (host-parameters (or (assoc-ref hosts hostname)
+                              ;; If no matching host is found, pick the
+                              ;; first known host.
+                              (match hosts
+                                (((_ . host-parameters) _ ...)
+                                 host-parameters)))))
     (format #t "~a ~a\n"
             (request-method request)
             path)
-    (call-with-current-directory (assq-ref host-parameters 'indexed-repository)
-      (lambda ()
-        (cond
-         ((member path (list "/" "/search"))
-          (let ((search-query (or (assoc-ref parameters "query")
-                                  "")))
-            (values '((content-type . (text/html)))
-                    (sxml->html
-                     (call-with-database xapian-index
-                       (lambda (db)
-                         (let ((mset (enquire-mset (enquire db (parse-query search-query))
-                                                   #:offset 0
-                                                   #:maximum-items (database-document-count db))))
-                           (make-search-page
-                            (reverse
-                             (mset-fold (lambda (item result)
-                                          (cons (document->sxml
-                                                 (call-with-input-string (document-data (mset-item-document item))
-                                                   (compose scm->object read))
-                                                 mset)
-                                                result))
-                                        '()
-                                        mset))
-                            search-query
-                            (MSet-get-matches-estimated mset)
-                            (assq-ref host-parameters 'css)))))))))
-         (else
-          (values (build-response #:code 404)
-                  (string-append "Resource not found: "
-                                 (uri->string (request-uri request))))))))))
+    (parameterize ((%current-git-repository
+                    (repository-open
+                     (string-append state-directory "/" hostname "/repository"))))
+      (cond
+       ((member path (list "/" "/search"))
+        (let ((search-query (or (assoc-ref parameters "query")
+                                "")))
+          (values '((content-type . (text/html)))
+                  (sxml->html
+                   (call-with-database (string-append state-directory "/" hostname "/xapian")
+                     (lambda (db)
+                       (let ((mset (enquire-mset (enquire db (parse-query search-query))
+                                                 #:offset 0
+                                                 #:maximum-items (database-document-count db))))
+                         (make-search-page
+                          (reverse
+                           (mset-fold (lambda (item result)
+                                        (cons (document->sxml
+                                               (call-with-input-string (document-data (mset-item-document item))
+                                                 (compose scm->object read))
+                                               mset)
+                                              result))
+                                      '()
+                                      mset))
+                          search-query
+                          (MSet-get-matches-estimated mset)
+                          (assq-ref host-parameters 'css)))))))))
+       (else
+        (values (build-response #:code 404)
+                (string-append "Resource not found: "
+                               (uri->string (request-uri request)))))))))
 
-(define (start-web-server socket-address hosts xapian-index)
+(define (start-web-server socket-address hosts state-directory)
   "Start web server listening on SOCKET-ADDRESS.
 
 HOSTS is an association list mapping host names to another association
-list containing parameters for that host. XAPIAN-INDEX is the path to
-the xapian database relative to the top-level of the git
-repository."
+list containing parameters for that host. STATE-DIRECTORY is the path
+to the tissue state directory."
   (format (current-error-port)
           "Tissue web server listening on ~a~%"
           (cond
@@ -243,7 +246,7 @@ repository."
                 ;; variable each time so as to support live hacking.
                 ((module-ref (resolve-module '(tissue web server))
                              'handler)
-                 request body hosts xapian-index))
+                 request body hosts state-directory))
               'http
               (cond
                ;; IPv4 or IPv6 address

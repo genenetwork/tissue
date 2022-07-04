@@ -263,7 +263,7 @@ Run a web search service reading configuration from CONFIG-FILE.
                                   ;; Assume current directory as default.
                                   `(("localhost"
                                      (indexed-repository . ,(getcwd))))))
-                         %xapian-index)))))
+                         (assq-ref args 'state-directory))))))
 
 ;; This is a noop, since the index is built on any tissue command. It
 ;; exists just for the --help usage summary.
