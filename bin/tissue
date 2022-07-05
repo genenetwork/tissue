@@ -420,8 +420,7 @@ HOSTNAME."
                          (build-website (git-top-level)
                                         temporary-output-directory
                                         (tissue-configuration-web-css config)
-                                        (tissue-configuration-web-files config)
-                                        #:log-port #f)
+                                        (tissue-configuration-web-files config))
                          (delete-file-recursively website-directory)
                          (rename-file temporary-output-directory
                                       website-directory)
