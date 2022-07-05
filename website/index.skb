@@ -1,0 +1,32 @@
+;;; tissue --- Text based issue tracker
+;;; Copyright © 2022 Arun Isaac <arunisaac@systemreboot.net>
+;;;
+;;; This file is part of tissue.
+;;;
+;;; tissue is free software: you can redistribute it and/or modify it
+;;; under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation, either version 3 of the License, or
+;;; (at your option) any later version.
+;;;
+;;; tissue is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
+
+(document :title "tissue"
+  (p [tissue is an issue tracker and project information management
+system built on plain text files and git. It is specifically intended
+for small free software projects. It features a static site generator
+to build a project website and a powerful search interface to search
+through project issues and documentation. The search interface is
+built on the ,(ref :url "https://xapian.org/" :text "Xapian search
+engine library"), and is available both as a command-line program and
+as a web server.])
+  (section :title "License" :number #f
+    (p [tissue is free software released under the terms of the ,(ref
+:url "https://www.gnu.org/licenses/gpl.html" :text "GNU General Public
+License"), either version 3 of the License, or (at your option) any
+later version.])))
