@@ -424,7 +424,8 @@ HOSTNAME."
                                         #:log-port #f)
                          (delete-file-recursively website-directory)
                          (rename-file temporary-output-directory
-                                      website-directory))))
+                                      website-directory)
+                         (chmod website-directory #o755))))
                     (format (current-error-port)
                             "Built website for ~a at ~a~%"
                             hostname
