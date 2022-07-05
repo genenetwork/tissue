@@ -27,19 +27,17 @@
             tissue-configuration-aliases
             tissue-configuration-indexed-documents
             tissue-configuration-web-css
-            tissue-configuration-web-tags-path
             tissue-configuration-web-files
             gemtext-files-in-directory))
 
 (define-record-type <tissue-configuration>
   (make-tissue-configuration project aliases indexed-documents
-                             web-css web-tags-path web-files)
+                             web-css web-files)
   tissue-configuration?
   (project tissue-configuration-project)
   (aliases tissue-configuration-aliases)
   (indexed-documents tissue-configuration-indexed-documents)
   (web-css tissue-configuration-web-css)
-  (web-tags-path tissue-configuration-web-tags-path)
   (web-files delayed-tissue-configuration-web-files))
 
 (define tissue-configuration-web-files
@@ -66,7 +64,7 @@ which directory they are in."
                                   #'(args ...))))
          #`(apply (lambda* (#:key project (aliases '())
                             (indexed-documents '())
-                            web-css (web-tags-path "/tags") (web-files (delay '())))
+                            web-css (web-files (delay '())))
                     "PROJECT is the name of the project. It is used in
 the title of the generated web pages, among other places.
 
@@ -81,12 +79,9 @@ WEB-CSS is the path to a CSS stylesheet. It is relative to the
 document root and must begin with a /. If it is #f, no stylesheet is
 used in the generated web pages.
 
-WEB-TAGS-PATH is the path relative to the document root where the
-per-tag issue listings are put. It must begin with a /.
-
 WEB-FILES is a list of <file> objects representing files to be written
 to the web output."
-                    (make-tissue-configuration project aliases indexed-documents web-css web-tags-path web-files))
+                    (make-tissue-configuration project aliases indexed-documents web-css web-files))
                   (list #,@(append before
                                    (syntax-case after ()
                                      ((web-files-key web-files rest ...)

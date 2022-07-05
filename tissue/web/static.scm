@@ -117,10 +117,6 @@ as a website.
 CSS is the path to a CSS stylesheet. If it is #f, no stylesheet is
 included in the generated web pages.
 
-TAGS-PATH is the path relative to the document root where the per-tag
-issue listings are put. It must begin with a /. If it is #f, per-tag
-issue listings are not generated.
-
 FILES is a list of <file> objects representing files to be written to
 the web output.
 
