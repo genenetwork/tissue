@@ -222,12 +222,10 @@ Export the repository as a website to OUTPUT-DIRECTORY.
     (state-directory . "/var/lib/tissue")
     ;; Assume current repository as default. If there is no current
     ;; repository, do not configure any hosts.
-    (hosts . ,(guard (c ((and (irritants-condition? c)
-                              (match (condition-irritants c)
-                                ((git-error _ ...)
-                                 (= (git-error-code git-error)
-                                    GIT_ENOTFOUND))
-                                (_ #f)))
+    (hosts . ,(guard (c ((let ((git-error (condition-git-error c)))
+                           (and git-error
+                                (= (git-error-code git-error)
+                                   GIT_ENOTFOUND)))
                          '()))
                 `(("localhost"
                    (upstream-repository . ,(git-top-level))))))))

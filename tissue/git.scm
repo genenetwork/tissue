@@ -18,8 +18,10 @@
 
 (define-module (tissue git)
   #:use-module (rnrs arithmetic bitwise)
+  #:use-module (rnrs conditions)
   #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
@@ -35,6 +37,7 @@
   #:use-module (tissue utils)
   #:export (reference-set-target!
             reference-symbolic-target
+            condition-git-error
             git-top-level
             %current-git-repository
             current-git-repository
@@ -70,6 +73,11 @@
     (lambda (reference)
       (pointer->string
        (proc (reference->pointer reference))))))
+
+(define (condition-git-error condition)
+  "Return <git-error> object from CONDITION. If none, return #f."
+  (and (irritants-condition? condition)
+       (find git-error? (condition-irritants condition))))
 
 (define %current-git-repository
   (make-parameter #f))
