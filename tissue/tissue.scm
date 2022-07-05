@@ -66,7 +66,7 @@ which directory they are in."
                                   #'(args ...))))
          #`(apply (lambda* (#:key project (aliases '())
                             (indexed-documents '())
-                            web-css (web-tags-path "/tags") (web-files '()))
+                            web-css (web-tags-path "/tags") (web-files (delay '())))
                     "PROJECT is the name of the project. It is used in
 the title of the generated web pages, among other places.
 
