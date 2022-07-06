@@ -21,6 +21,7 @@ project = tissue
 guile_effective_version = 3.0
 
 GUILD ?= guild
+GUILE ?= guile
 
 prefix ?= /usr/local
 exec_prefix ?= $(prefix)
@@ -32,6 +33,7 @@ top_level_module_dir = $(project)
 sources = $(wildcard $(top_level_module_dir)/*.scm) $(wildcard $(top_level_module_dir)/web/*.scm)
 objects = $(sources:.scm=.go)
 scripts = $(wildcard bin/*)
+tests = $(wildcard tests/*)
 
 scmdir = $(datarootdir)/guile/site/$(guile_effective_version)
 godir = $(libdir)/guile/$(guile_effective_version)/site-ccache
@@ -43,7 +45,8 @@ all: $(objects)
 %.go: %.scm
 	GUILE_AUTO_COMPILE=0 $(GUILD) compile -L . -o $@ $<
 
-check: ;
+check:
+	./pre-inst-env $(GUILE) $(tests)
 
 install:
 	install -D $(scripts) --target-directory $(bindir)
