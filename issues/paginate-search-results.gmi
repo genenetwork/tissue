@@ -1,0 +1,5 @@
+# Paginate search results
+
+* tags: enhancement, good first issue
+
+We should paginate search results in the web UI. We can add a page parameter to the search URI that specifies the page number to display. Each page should have "Next page" and "Previous page" links at the bottom.
