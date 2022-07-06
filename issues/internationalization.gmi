@@ -1,0 +1,5 @@
+# Internationalization
+
+* tags: enhancement
+
+We must internationalize all our message strings and make them ready for translation to various languages. We can Guile's GNU gettext interface to provide localization. In the CLI, gettext can automatically pick the language based on the locale. In the web UI, we will have to pass the value of the Accept-Language header to gettext. The Accept-Language header can be used for browser fingerprinting and privacy conscious users may not set it, but we have no better option.
