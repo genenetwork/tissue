@@ -253,8 +253,8 @@ object representing a list of search results."
                            ,@snippet))
                (list)))))
 
-(define (hashtable-append! hashtable key new-values)
-  "Append NEW-VALUES to the list of values KEY is associated to in
+(define (hashtable-prepend! hashtable key new-values)
+  "Prepend NEW-VALUES to the list of values KEY is associated to in
 HASHTABLE. Deduplicate the resulting list if necessary. If KEY is not
 associated to any value in HASHTABLE, assume it is associated to the
 empty list."
@@ -338,11 +338,11 @@ gemtext file."
                                    ;; their keys.
                                    (for-each (match-lambda
                                                (((or 'assign 'assigned) . values)
-                                                (hashtable-append! result 'assigned
-                                                                   (map (cut resolve-alias <> (%aliases))
-                                                                        values)))
+                                                (hashtable-prepend! result 'assigned
+                                                                    (map (cut resolve-alias <> (%aliases))
+                                                                         values)))
                                                (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
-                                                (hashtable-append! result 'keywords values))
+                                                (hashtable-prepend! result 'keywords values))
                                                (_ #t))
                                              alist)))
                              ;; A more fuzzy heuristic to find keywords
@@ -362,9 +362,9 @@ gemtext file."
                                                      "testing" "later" "documentation"
                                                      "help" "closed")))
 					(comma-split (string-remove-prefix "* " line))))
-                              (hashtable-append! result 'keywords
-						 (comma-split
-						  (string-remove-prefix "* " line))))
+                              (hashtable-prepend! result 'keywords
+						  (comma-split
+						   (string-remove-prefix "* " line))))
                              ;; The first level one heading is the
                              ;; title.
                              ((string-prefix? "# " line)
