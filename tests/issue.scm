@@ -70,4 +70,9 @@
   (call-with-input-string "* term: This is a definition of term."
     (compose hashtable->alist file-details)))
 
+(test-equal "Parse keywords even if they are long"
+  '((keywords "this is a long keyword"))
+  (call-with-input-string "* keywords: this is a long keyword"
+    (compose hashtable->alist file-details)))
+
 (test-end "issue")

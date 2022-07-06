@@ -325,16 +325,7 @@ gemtext file."
 				   (hashtable-update! result 'tasks 1+ 0)
 				   (unless (string=? (match:substring m 1) " ")
                                      (hashtable-update! result 'completed-tasks 1+ 0))))
-                             ((let ((alist (list-line->alist line)))
-                                (and alist
-                                     ;; Every value string is 2
-                                     ;; words or less.
-                                     (every (match-lambda
-                                              ((_ . values)
-                                               (every (cut <=n-words? <> 2)
-                                                      values)))
-                                            alist)
-                                     alist))
+                             ((list-line->alist line)
                               => (lambda (alist)
                                    ;; Insert values based on
                                    ;; their keys.
