@@ -282,12 +282,14 @@ return #f."
   (and (string-match "^\\* [a-zA-Z]+:" line)
        (fold (lambda (element result)
                (cond
+                ;; Begin new key.
                 ((string-match "^([a-zA-Z]+):[ ]*(.*)" element)
                  => (lambda (m)
                       (cons (list (string->symbol
                                    (string-downcase (match:substring m 1)))
                                   (match:substring m 2))
                             result)))
+                ;; Add to current key.
                 (else
                  (match result
                    (((key . values) tail ...)
