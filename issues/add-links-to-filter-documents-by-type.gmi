@@ -1,0 +1,5 @@
+# Add links to filter documents by type
+
+* tags: enhancement, web ui
+
+Currently, in the web UI, if the user wants to filter by document type (issues, other documents, etc.), they need to add terms such as type:issue or type:document to the search query. The casual user is not going to learn this search query syntax, and this is going to lead to a lot of confusion. It would be much better to add links to quickly filter by document type. These links will be graphical aids that any user can click with ease.
