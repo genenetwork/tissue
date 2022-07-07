@@ -334,7 +334,9 @@ gemtext file."
                                                 (hashtable-prepend! result 'assigned
                                                                     (map (cut resolve-alias <> (%aliases))
                                                                          values)))
-                                               (((or 'keywords 'severity 'status 'priority 'tags 'type) . values)
+                                               (((or 'keyword 'keywords 'severity 'status
+                                                     'priority 'tag 'tags 'type)
+                                                 . values)
                                                 (hashtable-prepend! result 'keywords values))
                                                (_ #t))
                                              alist)))
