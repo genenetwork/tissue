@@ -1,0 +1,9 @@
+# Search by date
+
+* tags: enhancement
+
+Allow searching issues by created and last updated dates. Take inspiration from mumi's date: and mdate: search filters.
+=> https://issues.guix.gnu.org/help#search mumi search filters
+
+We don't even index created and last updated dates yet. These will likely have to be stored as "values" in Xapian documents and queried using range queries.
+=> https://getting-started-with-xapian.readthedocs.io/en/latest/howtos/range_queries.html Xapian range queries
