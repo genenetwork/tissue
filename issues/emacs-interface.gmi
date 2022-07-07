@@ -1,0 +1,19 @@
+# Emacs interface
+
+* tags: enhancement, help wanted
+
+We have a web and CLI interfaces. It would be nice to also have an Emacs interface. We can use the current CLI interface with Emacs' shell mode, but the less pager does not play too well with it.
+
+## Interfacing Emacs with tissue
+
+To interface tissue with Emacs, we could take inspiration from the --format=sexp option of notmuch search. When notmuch search is passed a --format=sexp option, it prints out results as machine-readable S-expressions instead of as plain text. This makes the output easy to read using elisp's read function.
+=> https://notmuch.readthedocs.io/en/latest/man1/notmuch-search.html notmuch search documentation
+
+## UI
+
+The Emacs UI should probably use something like Tabulated List mode. Bonface also had some ideas for using transient.
+=> https://www.gnu.org/software/emacs/manual/html_node/elisp/Tabulated-List-Mode.html Tabulated List mode in the Emacs Lisp manual
+=> https://github.com/magit/transient transient
+=> https://issues.genenetwork.org/issues/gnbug/add-transient.html Bonface's original proposal on issues.genenetwork.org
+
+It would be very cool to have inifinite scroll and asynchronous loading of issues in the Emacs interface. On the other hand, if it is too complicated to achieve, it might not be worth it.
