@@ -1,0 +1,15 @@
+# GitHub-like milestones
+
+* tags: enhancement
+
+GitHub provides a "milestones" feature to track progress on a group of issues. This could be a set of issues that need to be resolved before releasing the next version of your software, for example.
+=> https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/about-milestones GitHub milestones
+
+We could implement a similar feature by adapting our task lists. When task lists specify paths to other issue files, we can recognize these as milestone-like lists, and automatically check/uncheck them based on the status of the referenced issues. Here is what such a milestone-like list might look like.
+```
+* [] /issues/internationalize.gmi
+* [] /issues/add-emacs-interface.gmi
+* [] /issues/paginate-results.gmi
+```
+
+What heuristics do we use to distinguish these milestone-like lists from regular task lists? In other words, how do we identify paths to other issue files reliably? Should we also allow relative paths to issue files?
