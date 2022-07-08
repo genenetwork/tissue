@@ -205,8 +205,13 @@ object representing a list of search results."
           ,(document-title issue))
        ,@(map (lambda (tag)
                 (let ((words (string-split tag (char-set #\- #\space))))
-                  `(a (@ (href ,(string-append "/search?query="
-                                               (uri-encode (string-append "tag:" tag))))
+                  `(a (@ (href ,(string-append
+                                 "/search?query="
+                                 (uri-encode
+                                  ;; Hyphenate tag if it has
+                                  ;; spaces. Xapian accepts hyphenated
+                                  ;; strings as exact phrases.
+                                  (string-append "tag:" (sanitize-string tag)))))
                          (class ,(string-append "tag"
                                                 (string-append " tag-" (sanitize-string tag))
                                                 (if (not (null? (lset-intersection
