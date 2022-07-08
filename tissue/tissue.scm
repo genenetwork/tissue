@@ -20,6 +20,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-71)
+  #:use-module (ice-9 match)
   #:use-module (tissue git)
   #:export (tissue-configuration
             tissue-configuration?
@@ -36,9 +37,12 @@
   tissue-configuration?
   (project tissue-configuration-project)
   (aliases tissue-configuration-aliases)
-  (indexed-documents tissue-configuration-indexed-documents)
+  (indexed-documents delayed-tissue-configuration-indexed-documents)
   (web-css tissue-configuration-web-css)
   (web-files delayed-tissue-configuration-web-files))
+
+(define tissue-configuration-indexed-documents
+  (compose force delayed-tissue-configuration-indexed-documents))
 
 (define tissue-configuration-web-files
   (compose force delayed-tissue-configuration-web-files))
@@ -54,19 +58,26 @@ which directory they are in."
                  (string-suffix? ".gmi" filename)))
           (git-tracked-files (current-git-repository))))
 
+(define (pairify lst)
+  "Return a list of pairs of successive elements of LST. For example,
+
+(pairify (list 1 2 3 4 5 6))
+=> ((1 . 2) (3 . 4) (5 . 6))"
+  (match lst
+    (() '())
+    ((first second tail ...)
+     (cons (cons first second)
+           (pairify tail)))))
+
 (define-syntax tissue-configuration
   (lambda (x)
     (syntax-case x ()
       ((_ args ...)
-       (let ((before after (break (lambda (arg)
-                                    (eq? (syntax->datum arg)
-                                         #:web-files))
-                                  #'(args ...))))
-         #`(apply (lambda* (#:key project (aliases '())
-                            (indexed-documents '())
-                            web-css (web-files (delay '())))
-                    "PROJECT is the name of the project. It is used in
-the title of the generated web pages, among other places.
+       #`((lambda* (#:key project (aliases '())
+                    (indexed-documents (delay '()))
+                    web-css (web-files (delay '())))
+            "PROJECT is the name of the project. It is used in the title of the
+generated web pages, among other places.
 
 ALIASES is a list of aliases used to refer to authors in the
 repository. Each element is in turn a list of aliases an author goes
@@ -81,10 +92,12 @@ used in the generated web pages.
 
 WEB-FILES is a list of <file> objects representing files to be written
 to the web output."
-                    (make-tissue-configuration project aliases indexed-documents web-css web-files))
-                  (list #,@(append before
-                                   (syntax-case after ()
-                                     ((web-files-key web-files rest ...)
-                                      #`(web-files-key (delay web-files)
-                                                       rest ...))
-                                     (() #'()))))))))))
+            (make-tissue-configuration project aliases
+                                       indexed-documents web-css web-files))
+          #,@(append-map (match-lambda
+                           ((key . value)
+                            (if (memq (syntax->datum key)
+                                      (list #:indexed-documents #:web-files))
+                                #`(#,key (delay #,value))
+                                #`(#,key #,value))))
+                         (pairify #'(args ...))))))))
