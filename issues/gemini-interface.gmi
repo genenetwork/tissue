@@ -1,0 +1,15 @@
+# Gemini interface
+
+* tags: enhancement, help wanted
+
+tissue needs to have a gemini interface in addition to its web and CLI interfaces. A gemini interface would play nicely with tissue's vision of a "small web". After all, tissue uses gemtext heavily and grew organically out of a desire to have a "Gemini based issue tracker".
+=> https://thesmallweb.org/ The Small Web
+
+The major obstacle to this is that, I do not know of any gemini server implementations in Guile. But, perhaps it is not hard to write one.
+=> https://gemini.circumlunar.space/docs/specification.gmi Gemini protocol specification
+=> https://gemini.circumlunar.space/software/ List of gemini software (both servers and clients)
+
+In addition to the current #:web-files tissue configuration parameter, we could have a #:gemini-files parameter that specifies a list of files to write into a gemini capsule output directory. tissue pull should build the gemini capsule (in addition to the website and the Xapian index) on every invocation.
+
+Also, how does one create a "dynamic gemini page" for tissue's search engine? Perhaps the implementation of the geminispace.info search engine is something to look into. On the web, we prefer to serve static HTML pages using nginx, while reverse proxying to tissue only for the search page. Should we do similar for gemini?
+=> gemini://geminispace.info/ Gemini search engine
