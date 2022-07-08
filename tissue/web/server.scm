@@ -228,8 +228,12 @@ STATE-DIRECTORY."
                           (MSet-get-matches-estimated mset)
                           (assq-ref host-parameters 'css)))))))))
        ;; Static files
-       ((let ((file-path (string-append state-directory "/" hostname "/website" path)))
-          (and (file-exists? file-path)
+       ((let ((file-path
+               (find file-exists?
+                     ;; Try path and path.html.
+                     (list (string-append state-directory "/" hostname "/website" path)
+                           (string-append state-directory "/" hostname "/website" path ".html")))))
+          (and file-path
                ;; Check that the file really is within the document
                ;; root.
                (string-prefix? (string-append state-directory "/" hostname "/website/")
