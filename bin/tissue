@@ -163,22 +163,6 @@ command-line arguments ARGS.
           (set-program-arguments (cons script args))
           (load (canonicalize-path script))))))))
 
-(define tissue-web
-  (match-lambda*
-    (("--help")
-     (format #t "Usage: ~a web OUTPUT-DIRECTORY
-Export the repository as a website to OUTPUT-DIRECTORY.
-
-"
-             (command-line-program)))
-    ((output-directory)
-     (let ((config (load-config)))
-       (parameterize ((%project-name (tissue-configuration-project config)))
-         (build-website (getcwd)
-                        output-directory
-                        (tissue-configuration-web-css config)
-                        (tissue-configuration-web-files config)))))))
-
 (define (listen->socket-address listen)
   "Convert LISTEN specification to a socket address."
   (cond
@@ -301,7 +285,6 @@ COMMAND must be one of the sub-commands listed below:
   search    search issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
-  web       export repository as website
   run-web   run a web search service
   pull      pull latest from upstream repositories
   index     index files
@@ -489,7 +472,6 @@ Pull latest from upstream repositories.
                         ("search" tissue-search)
                         ("show" tissue-show)
                         ("repl" tissue-repl)
-                        ("web" tissue-web)
                         ("index" tissue-index)
                         (invalid-command
                          (format (current-error-port) "Invalid command `~a'~%~%"
