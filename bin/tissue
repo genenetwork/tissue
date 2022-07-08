@@ -24,7 +24,6 @@ exec guile --no-auto-compile -s "$0" "$@"
         (rnrs exceptions)
         (rnrs io ports)
         (srfi srfi-1)
-        (srfi srfi-9)
         (srfi srfi-26)
         (srfi srfi-37)
         (srfi srfi-171)
@@ -53,16 +52,6 @@ exec guile --no-auto-compile -s "$0" "$@"
 
 (define %xapian-index
   (string-append %state-directory "/xapian"))
-
-(define-record-type <indexed-document>
-  (indexed-document reader web-uri)
-  indexed-document?
-  ;; A thunk that returns a document object (currently either an
-  ;; <issue> or a <document> object), presumably by reading it from a
-  ;; file or other source
-  (reader indexed-document-reader)
-  ;; A string URI linking to this document on the web
-  (web-uri indexed-document-web-uri))
 
 (define (invalid-option opt name arg loads)
   (error "Invalid option" name))
@@ -333,11 +322,8 @@ To get usage information for one of these sub-commands, run
     (delete-file-recursively db-path)
     (call-with-writable-database db-path
       (lambda (db)
-        (for-each (lambda (indexed-document)
-                    (let* ((document (slot-set ((indexed-document-reader indexed-document))
-                                               'web-uri
-                                               (indexed-document-web-uri indexed-document)))
-                           (term-generator (document-term-generator document)))
+        (for-each (lambda (document)
+                    (let ((term-generator (document-term-generator document)))
                       (index-text! term-generator (document-type document) #:prefix "XT")
                       (replace-document! db
                                          (document-id-term document)
