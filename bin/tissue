@@ -209,11 +209,11 @@ command-line arguments ARGS.
                     `(("localhost"
                        (upstream-repository . ,(git-top-level)))))))))
 
-(define tissue-run-web
+(define tissue-web
   (match-lambda*
     (("--help")
-     (format #t "Usage: ~a run-web [OPTIONS]
-Run a web search service reading configuration from CONFIG-FILE.
+     (format #t "Usage: ~a web [OPTIONS]
+Serve repositories specified in CONFIG-FILE over HTTP.
 
   --listen-repl=P             run REPL server listening on port or path P
   -C, --config=CONFIG-FILE    read configuration parameters from CONFIG-FILE
@@ -285,7 +285,7 @@ COMMAND must be one of the sub-commands listed below:
   search    search issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
-  run-web   run a web search service
+  web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
   index     index files
 
@@ -449,8 +449,8 @@ Pull latest from upstream repositories.
        (print-usage))
       ((_ "pull" args ...)
        (apply tissue-pull args))
-      ((_ "run-web" args ...)
-       (apply tissue-run-web args))
+      ((_ "web" args ...)
+       (apply tissue-web args))
       ((_ command args ...)
        (call-with-current-directory (git-top-level)
          (lambda ()
