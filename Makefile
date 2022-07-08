@@ -46,7 +46,9 @@ all: $(objects)
 	GUILE_AUTO_COMPILE=0 $(GUILD) compile -L . -o $@ $<
 
 check:
-	./pre-inst-env $(GUILE) $(tests)
+	for test in $(tests); do \
+		./pre-inst-env $(GUILE) $$test; \
+	done
 
 install:
 	install -D $(scripts) --target-directory $(bindir)
