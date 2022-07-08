@@ -23,6 +23,7 @@
   #:use-module (ice-9 filesystem)
   #:use-module (ice-9 popen)
   #:export (string-remove-prefix
+            string-remove-suffix
             human-date-string
             call-with-current-directory
             call-with-temporary-directory
@@ -33,6 +34,11 @@
 (define (string-remove-prefix prefix str)
   "Remove PREFIX from STR."
   (substring str (string-length prefix)))
+
+(define (string-remove-suffix suffix str)
+  "Remove SUFFIX from STR."
+  (substring str 0 (- (string-length str)
+                      (string-length suffix))))
 
 (define (human-date-string date)
   "Return a human readable rendering of DATE."
