@@ -1,0 +1,13 @@
+# Support issue templates
+
+* tags: enhancement, good first issue
+
+It would be very helpful to have issue templates in tissue. It can be used by a project to gently guide issue creators into following a specific format. We could imagine a directory .tissue/templates/ that contains different templates such as .tissue/templates/bug.gmi, .tissue/templates/feature-request.gmi, etc. We can present these templates to the user via a new tissue report subcommand.
+```
+tissue report bug issues/my-new-bug-report.gmi
+tissue report feature-request issues/my-new-feature-request.gmi
+```
+Editor-specific features such as Emacs' yasnippet may also provide a potent alternative or supplement to this feature.
+
+This idea is based on an original feature request by jgart at issues.genenetwork.org.
+=> https://issues.genenetwork.org/issues/gnbug/add-convenience-templates jgart's original feature request
