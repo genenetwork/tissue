@@ -40,6 +40,7 @@
             document-id-term
             document-text
             document-term-generator
+            document-snippet-source-text
             document-snippet
             print
             document-sxml-snippet
@@ -178,15 +179,21 @@ and further text, increase-termpos! must be called before indexing."
     (index-text! term-generator (file-document-path document))
     term-generator))
 
+(define-method (document-snippet-source-text (document <document>))
+  "Return the source text for DOCUMENT from which to extract a search
+result snippet."
+  ;; Remove blank lines from document text.
+  (string-join
+   (remove (cut string-every char-set:whitespace <>)
+           (string-split (document-text document)
+                         #\newline))
+   "\n"))
+
 (define (document-html-snippet document mset)
   "Return snippet for DOCUMENT. MSET is the xapian MSet object
 representing a list of search results."
   (mset-snippet mset
-                (string-join
-                 (remove (cut string-every char-set:whitespace <>)
-                         (string-split (document-text document)
-                                       #\newline))
-                 "\n")
+                (document-snippet-source-text document)
                 #:length 200
                 #:highlight-start "<b>"
                 #:highlight-end "</b>"
