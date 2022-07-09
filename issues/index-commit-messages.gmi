@@ -5,3 +5,9 @@
 Currently, we only index issues and other documents. We could also index commit messages. If a project is in the habit of writing long detailed story-like commit messages, this feature could be very useful. I have always been frustrated by the lack of stemming when searching commit messages with git log --grep.
 
 If we can index commit messages, could we even index commit diffs and source files as well? Perhaps there is something about source code that makes it harder to index?
+
+## Resolution
+
+Commit messages are now indexed. We can revisit indexing commit diffs and source code later, if need be.
+
+* closed
