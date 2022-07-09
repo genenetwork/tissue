@@ -153,6 +153,7 @@ and further text, increase-termpos! must be called before indexing."
                       #:data (call-with-output-string
                                (cut write (object->scm document) <>))
                       #:terms `((,(document-id-term document) . 0))))))
+    (index-text! term-generator (document-type document) #:prefix "XT")
     (index-text! term-generator (document-title document) #:prefix "S")
     (index-text! term-generator (document-text document))
     term-generator))
