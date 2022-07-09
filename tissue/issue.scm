@@ -78,9 +78,6 @@
   (author #:accessor post-author #:init-keyword #:author)
   (date #:accessor post-date #:init-keyword #:date))
 
-(define-method (document-type (issue <issue>))
-  "issue")
-
 (define-method (document-term-generator (issue <issue>))
   "Return a term generator indexing ISSUE."
   (let ((term-generator (next-method)))

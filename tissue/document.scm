@@ -137,7 +137,8 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
   (web-uri #:accessor document-web-uri #:init-keyword #:web-uri))
 
 (define-method (document-type (document <document>))
-  "document")
+  (string-trim-both (symbol->string (class-name (class-of document)))
+                    (char-set #\< #\>)))
 
 (define-method (document-term-generator (document <document>))
   "Return a term generator for DOCUMENT. The returned term generator has
@@ -157,6 +158,9 @@ and further text, increase-termpos! must be called before indexing."
 
 (define-class <file-document> (<document>)
   (path #:accessor file-document-path #:init-keyword #:path))
+
+(define-method (document-type (document <file-document>))
+  (next-method))
 
 (define-method (document-id-term (document <file-document>))
   "Return the ID term for DOCUMENT."
