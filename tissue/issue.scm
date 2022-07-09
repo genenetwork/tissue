@@ -382,9 +382,9 @@ gemtext file."
       #:title (let ((title (hashtable-ref file-details 'title "")))
                 (if (string-any char-set:letter title) title file))
       #:creator (first commit-authors)
-      #:created-date (commit-date (first commits))
+      #:created-date (commit-author-date (first commits))
       #:last-updater (last commit-authors)
-      #:last-updated-date (commit-date (last commits))
+      #:last-updated-date (commit-author-date (last commits))
       #:assigned (hashtable-ref file-details 'assigned '())
       ;; "closed" is a special keyword to indicate the open/closed
       ;; status of an issue.
@@ -395,6 +395,6 @@ gemtext file."
       #:posts (map (lambda (commit author)
                      (make <post>
                        #:author author
-                       #:date (commit-date commit)))
+                       #:date (commit-author-date commit)))
                    commits
                    commit-authors))))

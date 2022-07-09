@@ -41,7 +41,7 @@
             git-top-level
             %current-git-repository
             current-git-repository
-            commit-date
+            commit-author-date
             git-tracked-files
             call-with-file-in-git
             file-modification-table
@@ -99,12 +99,14 @@ directory."
    (commit-lookup repository
                   (reference-name->oid repository "HEAD"))))
 
-(define (commit-date commit)
-  (time-monotonic->date
-   (make-time time-monotonic
-              0
-              (commit-time commit))
-   (* 60 (commit-time-offset commit))))
+(define (commit-author-date commit)
+  "Return the author date of COMMIT as an SRFI-19 date object."
+  (let ((time (signature-when (commit-author commit))))
+    (time-monotonic->date
+     (make-time time-monotonic
+                0
+                (time-time time))
+     (* 60 (time-offset time)))))
 
 (define* (git-tracked-files #:optional (repository (current-git-repository)))
   "Return a list of all files and directories tracked in REPOSITORY. The
