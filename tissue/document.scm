@@ -164,7 +164,7 @@ and further text, increase-termpos! must be called before indexing."
 
 (define-method (document-id-term (document <file-document>))
   "Return the ID term for DOCUMENT."
-  (string-append "Q" (file-document-path document)))
+  (string-append "Qfile." (file-document-path document)))
 
 (define-method (document-text (document <file-document>))
   "Return the full text of DOCUMENT."
