@@ -32,9 +32,9 @@
   #:use-module (xapian xapian)
   #:use-module (tissue document)
   #:use-module (tissue git)
+  #:use-module (tissue person)
   #:use-module (tissue utils)
-  #:export (%aliases
-            <issue>
+  #:export (<issue>
             issue-creator
             issue-created-date
             issue-last-updater
@@ -57,9 +57,6 @@
             issues
             read-gemtext-issue
             index-issue))
-
-(define %aliases
-  (make-parameter #f))
 
 (define-class <issue> (<file-document>)
   (creator #:accessor issue-creator #:init-keyword #:creator)
@@ -300,18 +297,6 @@ return #f."
              '()
              (comma-split (string-remove-prefix "* " line)))))
 
-(define (resolve-alias name aliases)
-  "Resolve NAME against ALIASES, a list of aliases. ALIASES should be
-in the form of the argument of the same name to `tissue-configuration'
-in (tissue tissue). If no alias is found, NAME is returned as such."
-  (cond
-   ((find (cut member name <>)
-          aliases)
-    => (match-lambda
-         ((canonical-name _ ...) canonical-name)
-         (() name)))
-   (else name)))
-
 (define (file-details port)
   "Return a hashtable of details extracted from input PORT reading a
 gemtext file."
@@ -413,10 +398,3 @@ gemtext file."
                        #:date (commit-date commit)))
                    commits
                    commit-authors))))
-
-(define (index-person! term-generator name prefix)
-  "Index all aliases of person of canonical NAME using TERM-GENERATOR
-with PREFIX."
-  (for-each (cut index-text! term-generator <> #:prefix prefix)
-            (or (assoc name (%aliases))
-                (list))))

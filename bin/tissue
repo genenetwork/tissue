@@ -41,6 +41,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (tissue document)
         (tissue git)
         (tissue issue)
+        (tissue person)
         (tissue search)
         (tissue tissue)
         (tissue utils)
