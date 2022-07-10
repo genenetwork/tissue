@@ -31,25 +31,18 @@
 
 (define (parse-query search-query)
   "Parse SEARCH-QUERY and return a xapian Query object."
-  (xapian:parse-query
-   ;; When query does not mention type or state, assume
-   ;; is:open. Assuming is:open is implicitly assuming type:issue
-   ;; since only issues can have is:open.
-   (if (string-null? search-query)
-       "is:open"
-       (if (or (string-contains-ci search-query "type:")
-               (string-contains-ci search-query "is:"))
-           search-query
-           (string-append "is:open AND (" search-query ")")))
-   #:stemmer (make-stem "en")
-   #:prefixes '(("type" . "XT")
-                ("title" . "S")
-                ("creator" . "A")
-                ("lastupdater" . "XA")
-                ("assigned" . "XI")
-                ("keyword" . "K")
-                ("tag" . "K")
-                ("is" . "XS"))))
+  (if (string-null? search-query)
+      (Query-MatchAll)
+      (xapian:parse-query search-query
+                          #:stemmer (make-stem "en")
+                          #:prefixes '(("type" . "XT")
+                                       ("title" . "S")
+                                       ("creator" . "A")
+                                       ("lastupdater" . "XA")
+                                       ("assigned" . "XI")
+                                       ("keyword" . "K")
+                                       ("tag" . "K")
+                                       ("is" . "XS")))))
 
 (define* (search-fold proc initial db search-query
                       #:key (offset 0) (maximum-items (database-document-count db)))
