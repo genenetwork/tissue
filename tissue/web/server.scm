@@ -60,6 +60,17 @@ form { text-align: center; }
     padding: 0 0.2em;
 }
 
+.search-results-statistics {
+    list-style: none;
+    padding: 0;
+}
+.search-results-statistics li {
+    display: inline;
+    margin: 0.5em;
+}
+.search-results-statistics a { color: blue; }
+.current-search-type { font-weight: bold; }
+
 .search-results { padding: 0; }
 .search-result {
     list-style-type: none;
@@ -112,10 +123,24 @@ a.tag-chore {
     color: black;
 }")
 
-(define (make-search-page results query estimated-matches css)
-  "Return SXML for a page with search RESULTS produced for
-QUERY. ESTIMATED-MATCHES is the estimated number of matches. CSS is a
-URI to a stylesheet."
+(define* (make-search-page results query css
+                           #:key
+                           page-uri-path page-uri-parameters
+                           matches
+                           matched-open-issues matched-closed-issues
+                           matched-documents matched-commits
+                           current-search-type)
+  "Return SXML for a page with search RESULTS produced for QUERY.
+
+CSS is a URI to a stylesheet. PAGE-URI-PATH is the path part of the
+URI to the page. PAGE-URI-PARAMETERS is an association list of
+parameters in the query string of the URI of the page.
+
+MATCHES is the number of matches. MATCHED-OPEN-ISSUES,
+MATCHED-CLOSED-ISSUES, MATCHED-DOCUMENTS and MATCHED-COMMITS are
+respectively the number of open issues, closed issues, documents and
+commits matching the current query. CURRENT-SEARCH-TYPE is the type of
+document search results are being showed for."
   `(html
     (head
      (title "Tissue search")
@@ -131,6 +156,9 @@ URI to a stylesheet."
                      (name "query")
                      (value ,query)
                      (placeholder "Enter search query")))
+           (input (@ (type "hidden")
+                     (name "type")
+                     (value ,(symbol->string current-search-type))))
            (input (@ (type "submit") (value "Search"))))
      (details (@ (class "search-hint"))
               (summary "Hint")
@@ -156,9 +184,24 @@ operators "
                  (span (@ (class "search-filter"))
                        "OR")
                  "."))
-     (p "Found an estimated "
-        (strong ,(string-append (number->string estimated-matches))
-                " results"))
+     ,(let ((search-result-statistic
+             (lambda (search-type format-string matches)
+               `(li (a (@ (href ,(string-append
+                                  page-uri-path
+                                  "?"
+                                  (query-string
+                                   (acons "type" (symbol->string search-type)
+                                          (alist-delete "type" page-uri-parameters)))))
+                          ,@(if (eq? search-type current-search-type)
+                                '((class "current-search-type"))
+                                '()))
+                       ,(format #f format-string matches))))))
+        `(ul (@ (class "search-results-statistics"))
+             ,(search-result-statistic 'all "~a All" matches)
+             ,(search-result-statistic 'open-issue "~a open issues" matched-open-issues)
+             ,(search-result-statistic 'closed-issue "~a closed issues" matched-closed-issues)
+             ,(search-result-statistic 'document "~a documents" matched-documents)
+             ,(search-result-statistic 'commit "~a commits" matched-commits)))
      (ul (@ (class "search-results"))
          ,@results))))
 
@@ -173,6 +216,17 @@ operators "
            (string-split query #\&))
       '()))
 
+(define (query-string parameters)
+  "Return a query string for association list of PARAMETERS."
+  (string-join
+   (map (match-lambda
+          ((key . value)
+           (string-append (uri-encode key)
+                          "="
+                          (uri-encode value))))
+        parameters)
+   "&"))
+
 (define %mime-types
   '(("gif" image/gif)
     ("html" text/html)
@@ -184,6 +238,17 @@ operators "
     ("pdf" application/pdf)
     ("svg" image/svg+xml)
     ("txt" text/plain)))
+
+(define (matches db search-query filter)
+  "Return the number of matches in DB for SEARCH-QUERY filtering with
+FILTER query."
+  (MSet-get-matches-estimated
+   (enquire-mset
+    (enquire
+     db (new-Query (Query-OP-FILTER)
+                   (parse-query search-query)
+                   filter))
+    #:maximum-items (database-document-count db))))
 
 (define (handler request body hosts state-directory)
   "Handle web REQUEST with BODY and return two values---the response
@@ -208,13 +273,24 @@ STATE-DIRECTORY."
       (cond
        ;; Search page
        ((member path (list "/" "/search"))
-        (let ((search-query (or (assoc-ref parameters "query")
-                                "")))
+        (let* ((search-query (or (assoc-ref parameters "query")
+                                 ""))
+               (search-type (match (assoc-ref parameters "type")
+                              ((or "open-issue" "closed-issue" "commit" "document")
+                               (string->symbol (assoc-ref parameters "type")))
+                              (_ 'all)))
+               (filter-alist `((open-issue . ,(parse-query "type:issue AND is:open"))
+                               (closed-issue . ,(parse-query "type:issue AND is:closed"))
+                               (commit . ,(parse-query "type:commit"))
+                               (document . ,(parse-query "type:document")))))
           (values '((content-type . (text/html)))
                   (sxml->html
                    (call-with-database (string-append state-directory "/" hostname "/xapian")
                      (lambda (db)
-                       (let ((mset (enquire-mset (enquire db (parse-query search-query))
+                       (let ((mset (enquire-mset (enquire db (new-Query (Query-OP-FILTER)
+                                                                        (parse-query search-query)
+                                                                        (or (assq-ref filter-alist search-type)
+                                                                            (Query-MatchAll))))
                                                  #:offset 0
                                                  #:maximum-items (database-document-count db))))
                          (make-search-page
@@ -228,8 +304,15 @@ STATE-DIRECTORY."
                                       '()
                                       mset))
                           search-query
-                          (MSet-get-matches-estimated mset)
-                          (assq-ref host-parameters 'css)))))))))
+                          (assq-ref host-parameters 'css)
+                          #:page-uri-path path
+                          #:page-uri-parameters parameters
+                          #:matches (matches db search-query (Query-MatchAll))
+                          #:matched-open-issues (matches db search-query (assq-ref filter-alist 'open-issue))
+                          #:matched-closed-issues (matches db search-query (assq-ref filter-alist 'closed-issue))
+                          #:matched-documents (matches db search-query (assq-ref filter-alist 'document))
+                          #:matched-commits (matches db search-query (assq-ref filter-alist 'commit))
+                          #:current-search-type search-type))))))))
        ;; Static files
        ((let ((file-path
                (find file-exists?
