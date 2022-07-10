@@ -1,0 +1,5 @@
+# Sort by date
+
+* tags: enhancement
+
+The search page with a blank query doubles as a listing of all issues and documents. So, it is nicer if that listing is ordered by creation date. With actual non-blank search queries, it is ok to sort by relevance as we already do.
