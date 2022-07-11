@@ -1,0 +1,5 @@
+# Search suggestions
+
+* tags: enhancement, web ui
+
+Implement search suggestions, just like on Google. As the user types into the search box, a list of search suggestions should pop down. For good user experience, it is important that this be asynchronous and not block the UI.
