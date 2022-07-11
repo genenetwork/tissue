@@ -1,0 +1,13 @@
+# Incremental search
+
+* tags: enhancement, web ui
+
+We could implement "incremental search" in the web UI. Incremental search is a real-time search feature in which results matching a query are immediately rendered on the page. This is like how Helm and similar work on Emacs.
+=> https://en.wikipedia.org/wiki/Incremental_search Incremental search on Wikipedia
+
+According to the above Wikipedia article, Google implemented incremental search under the name "Google Instant", but later discontinued the service. I wonder why.
+
+For incremental search with Xapian, special considerations with the query parser apply.
+=> https://xapian.org/docs/queryparser.html#partially-entered-query-matching Considerations for partially entered query matching with Xapian's query parser
+
+Incremental search would incur a significantly higher bandwidth cost than regular delimited search. It should be strictly optional. The page should fall back to delimited search when it is disabled (say, when javascript is disabled).
