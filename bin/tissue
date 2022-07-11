@@ -39,6 +39,7 @@ exec guile --no-auto-compile -s "$0" "$@"
         (xapian wrap)
         (xapian xapian)
         (tissue commit)
+        (tissue file-document)
         (tissue document)
         (tissue git)
         (tissue issue)

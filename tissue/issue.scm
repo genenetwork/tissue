@@ -31,6 +31,7 @@
   #:use-module (web uri)
   #:use-module (xapian xapian)
   #:use-module (tissue document)
+  #:use-module (tissue file-document)
   #:use-module (tissue git)
   #:use-module (tissue person)
   #:use-module (tissue utils)

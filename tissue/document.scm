@@ -22,7 +22,6 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-26)
-  #:use-module (srfi srfi-171)
   #:use-module (ice-9 match)
   #:use-module (htmlprag)
   #:use-module (oop goops)
@@ -44,10 +43,7 @@
             document-snippet
             print
             document-sxml-snippet
-            document->sxml
-            <file-document>
-            file-document-path
-            read-gemtext-document))
+            document->sxml))
 
 (define (slot-set object slot-name value)
   "Set SLOT-NAME in OBJECT to VALUE. This is a purely functional setter
@@ -137,6 +133,11 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
   (title #:accessor document-title #:init-keyword #:title)
   (web-uri #:accessor document-web-uri #:init-keyword #:web-uri))
 
+(define-generic document-id-term)
+(define-generic document-text)
+(define-generic print)
+(define-generic document->sxml)
+
 (define-method (document-type (document <document>))
   (string-trim-both (symbol->string (class-name (class-of document)))
                     (char-set #\< #\>)))
@@ -156,28 +157,6 @@ and further text, increase-termpos! must be called before indexing."
     (index-text! term-generator (document-type document) #:prefix "XT")
     (index-text! term-generator (document-title document) #:prefix "S")
     (index-text! term-generator (document-text document))
-    term-generator))
-
-(define-class <file-document> (<document>)
-  (path #:accessor file-document-path #:init-keyword #:path))
-
-(define-method (document-type (document <file-document>))
-  (next-method))
-
-(define-method (document-id-term (document <file-document>))
-  "Return the ID term for DOCUMENT."
-  (string-append "Qfile." (file-document-path document)))
-
-(define-method (document-text (document <file-document>))
-  "Return the full text of DOCUMENT."
-  (call-with-file-in-git (current-git-repository) (file-document-path document)
-    get-string-all))
-
-(define-method (document-term-generator (document <file-document>))
-  "Return a term generator indexing DOCUMENT."
-  (let ((term-generator (next-method)))
-    (increase-termpos! term-generator)
-    (index-text! term-generator (file-document-path document))
     term-generator))
 
 (define-method (document-snippet-source-text (document <document>))
@@ -216,23 +195,6 @@ representing a list of search results."
            children)
       ""))))
 
-(define-method (print (document <file-document>) mset port)
-  "Print DOCUMENT in command-line search results. MSET is the xapian
-MSet object representing a list of search results."
-  (display (colorize-string (document-title document) 'MAGENTA 'UNDERLINE)
-           port)
-  (newline port)
-  (display (colorize-string "DOCUMENT" 'BOLD 'YELLOW) port)
-  (display " " port)
-  (display (colorize-string (file-document-path document) 'YELLOW)
-           port)
-  (newline port)
-  (let ((snippet (document-snippet document mset)))
-    (unless (string-null? snippet)
-      (display snippet port)
-      (newline port)
-      (newline port))))
-
 (define (document-sxml-snippet document mset)
   "Return snippet in SXML form for DOCUMENT. MSET is the xapian MSet
 object representing a list of search results."
@@ -251,33 +213,3 @@ object representing a list of search results."
                     (else
                      (list child))))
                  children))))
-
-(define-method (document->sxml (document <file-document>) mset)
-  "Render DOCUMENT to SXML. MSET is the xapian MSet object representing
-a list of search results."
-  `(li (@ (class "search-result search-result-document"))
-       (a (@ (href ,(document-web-uri document))
-             (class "search-result-title"))
-          ,(document-title document))
-       ,@(let ((snippet (document-sxml-snippet document mset)))
-           (if snippet
-               (list `(div (@ (class "search-result-snippet"))
-                           ,@snippet))
-               (list)))))
-
-(define (read-gemtext-document file)
-  "Reade gemtext document from FILE. Return a <file-document> object."
-  (make <file-document>
-    #:title (or (call-with-file-in-git (current-git-repository) file
-                  (lambda (port)
-                    (port-transduce (tfilter-map (lambda (line)
-                                                   ;; The first level one
-                                                   ;; heading is the title.
-                                                   (and (string-prefix? "# " line)
-                                                        (string-remove-prefix "# " line))))
-                                    (rany identity)
-                                    get-line-dos-or-unix
-                                    port)))
-                ;; Fallback to filename if document has no title.
-                file)
-    #:path file))
