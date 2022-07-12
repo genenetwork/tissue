@@ -17,7 +17,6 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (define-module (tissue document)
-  #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-19)
