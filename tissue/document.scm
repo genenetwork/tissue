@@ -95,13 +95,12 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
     (list->vector (map object->scm object)))
    (else
     (cons (cons 'type (class-name (class-of object)))
-          (map (lambda (slot)
-                 (let* ((slot-name (slot-definition-name slot))
-                        (value (if (slot-bound? object slot-name)
-                                   (slot-ref object slot-name)
-                                   (goops-error "Unbound slot ~s in ~s" slot-name object))))
-                   (cons slot-name (object->scm value))))
-               (class-slots (class-of object)))))))
+          (filter-map (lambda (slot)
+                        (if (slot-bound? object (slot-definition-name slot))
+                            (cons (slot-definition-name slot)
+                                  (object->scm (slot-ref object (slot-definition-name slot))))
+                            #f))
+                      (class-slots (class-of object)))))))
 
 (define (scm->object scm)
   "Convert serializable object SCM to a GOOPS object."
