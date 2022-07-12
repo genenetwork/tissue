@@ -22,7 +22,8 @@
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 filesystem)
   #:use-module (ice-9 popen)
-  #:export (string-remove-prefix
+  #:export (string-blank?
+            string-remove-prefix
             string-remove-suffix
             human-date-string
             call-with-current-directory
@@ -30,6 +31,10 @@
             call-with-output-pipe
             get-line-dos-or-unix
             memoize-thunk))
+
+(define (string-blank? str)
+  "Return #t if STR contains only whitespace. Else, return #f."
+  (string-every char-set:whitespace str))
 
 (define (string-remove-prefix prefix str)
   "Remove PREFIX from STR."
