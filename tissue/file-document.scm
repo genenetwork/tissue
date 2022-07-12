@@ -82,7 +82,7 @@ a list of search results."
                (list)))))
 
 (define (read-gemtext-document file)
-  "Reade gemtext document from FILE. Return a <file-document> object."
+  "Read gemtext document from FILE. Return a <file-document> object."
   (make <file-document>
     #:title (or (call-with-file-in-git (current-git-repository) file
                   (lambda (port)
