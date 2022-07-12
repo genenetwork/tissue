@@ -36,19 +36,11 @@
   #:use-module (tissue person)
   #:use-module (tissue utils)
   #:export (<issue>
-            issue-creator
-            issue-created-date
-            issue-last-updater
-            issue-last-updated-date
             issue-assigned
             issue-keywords
             issue-open?
             issue-tasks
             issue-completed-tasks
-            issue-posts
-            <post>
-            post-author
-            post-date
             issue->alist
             alist->issue
             post->alist
@@ -60,27 +52,17 @@
             index-issue))
 
 (define-class <issue> (<file-document>)
-  (creator #:accessor issue-creator #:init-keyword #:creator)
-  (created-date #:accessor issue-created-date #:init-keyword #:created-date)
-  (last-updater #:accessor issue-last-updater #:init-keyword #:last-updater)
-  (last-updated-date #:accessor issue-last-updated-date #:init-keyword #:last-updated-date)
   (assigned #:accessor issue-assigned #:init-keyword #:assigned)
   (keywords #:accessor issue-keywords #:init-keyword #:keywords)
   (open? #:accessor issue-open? #:init-keyword #:open?)
   (tasks #:accessor issue-tasks #:init-keyword #:tasks)
-  (completed-tasks #:accessor issue-completed-tasks #:init-keyword #:completed-tasks)
-  ;; List of <post> objects, oldest first.
-  (posts #:accessor issue-posts #:init-keyword #:posts))
-
-(define-class <post> ()
-  (author #:accessor post-author #:init-keyword #:author)
-  (date #:accessor post-date #:init-keyword #:date))
+  (completed-tasks #:accessor issue-completed-tasks #:init-keyword #:completed-tasks))
 
 (define-method (document-term-generator (issue <issue>))
   "Return a term generator indexing ISSUE."
   (let ((term-generator (next-method)))
-    (index-person! term-generator (issue-creator issue) "A")
-    (index-person! term-generator (issue-last-updater issue) "XA")
+    (index-person! term-generator (file-document-creator issue) "A")
+    (index-person! term-generator (file-document-last-updater issue) "XA")
     (for-each (cut index-person! term-generator <> "XI")
               (issue-assigned issue))
     (for-each (cut index-text! term-generator <> #:prefix "K")
@@ -92,7 +74,7 @@
 
 (define-method (print (issue <issue>) mset port)
   "Print ISSUE, an <issue> object, in search results."
-  (let ((number-of-posts (length (issue-posts issue))))
+  (let ((number-of-posts (length (file-document-commits issue))))
     (display (colorize-string (document-title issue) 'MAGENTA 'UNDERLINE)
              port)
     (unless (null? (issue-keywords issue))
@@ -124,17 +106,17 @@
     (newline port)
     (display (string-append
               "opened "
-              (colorize-string (human-date-string (issue-created-date issue)) 'CYAN)
+              (colorize-string (human-date-string (file-document-created-date issue)) 'CYAN)
               " by "
-              (colorize-string (issue-creator issue) 'CYAN))
+              (colorize-string (file-document-creator issue) 'CYAN))
              port)
     (when (> number-of-posts 1)
       (display (string-append (colorize-string "," 'CYAN)
                               " last updated "
-                              (colorize-string (human-date-string (issue-last-updated-date issue))
+                              (colorize-string (human-date-string (file-document-last-updated-date issue))
                                                'CYAN)
                               " by "
-                              (colorize-string (issue-last-updater issue)
+                              (colorize-string (file-document-last-updater issue)
                                                'CYAN))
                port))
     (unless (zero? (issue-tasks issue))
@@ -153,7 +135,7 @@
 
 (define (print-issue-to-gemtext issue)
   "Print ISSUE to gemtext."
-  (let ((number-of-posts (length (issue-posts issue))))
+  (let ((number-of-posts (length (file-document-commits issue))))
     (format #t "# ~a" (document-title issue))
     (unless (null? (issue-keywords issue))
       (format #t " [~a]"
@@ -167,12 +149,12 @@
       (format #t " [~a posts]" number-of-posts))
     (newline)
     (format #t "opened ~a by ~a"
-            (human-date-string (issue-created-date issue))
-            (issue-creator issue))
+            (human-date-string (file-document-created-date issue))
+            (file-document-creator issue))
     (when (> number-of-posts 1)
       (format #t ", last updated ~a by ~a"
-              (human-date-string (issue-last-updated-date issue))
-              (issue-last-updater issue)))
+              (human-date-string (file-document-last-updated-date issue))
+              (file-document-last-updater issue)))
     (unless (zero? (issue-tasks issue))
       (format #t "; ~a/~a tasks done"
               (issue-completed-tasks issue)
@@ -234,13 +216,13 @@ object representing a list of search results."
        (div (@ (class "search-result-metadata"))
             ,(string-append
               (format #f "opened ~a by ~a"
-                      (human-date-string (issue-created-date issue))
-                      (issue-creator issue))
-              (if (> (length (issue-posts issue))
+                      (human-date-string (file-document-created-date issue))
+                      (file-document-creator issue))
+              (if (> (length (file-document-commits issue))
                      1)
                   (format #f ", last updated ~a by ~a"
-                          (human-date-string (issue-last-updated-date issue))
-                          (issue-last-updater issue))
+                          (human-date-string (file-document-last-updated-date issue))
+                          (file-document-last-updater issue))
                   "")
               (if (zero? (issue-tasks issue))
                   ""
@@ -359,33 +341,20 @@ gemtext file."
                     port)
     result))
 
-(define file-modification-table-for-current-repository
-  (memoize-thunk
-   (cut file-modification-table (current-git-repository))))
-
 (define (read-gemtext-issue file)
   "Read issue from gemtext FILE. Return an <issue> object."
-  (let* ((file-details (call-with-file-in-git (current-git-repository) file
+  (let* ((file-document (read-gemtext-document file))
+         (file-details (call-with-file-in-git (current-git-repository) file
                          file-details))
          ;; Downcase keywords to make them
          ;; case-insensitive.
          (all-keywords (map string-downcase
-                            (hashtable-ref file-details 'keywords '())))
-         (commits (hashtable-ref (file-modification-table-for-current-repository)
-                                 file #f))
-         (commit-authors (map (lambda (commit)
-                                (resolve-alias (signature-name (commit-author commit))
-                                               (%aliases)))
-                              commits)))
+                            (hashtable-ref file-details 'keywords '()))))
     (make <issue>
       #:path file
       ;; Fallback to filename if title has no alphabetic characters.
       #:title (let ((title (hashtable-ref file-details 'title "")))
                 (if (string-any char-set:letter title) title file))
-      #:creator (first commit-authors)
-      #:created-date (commit-author-date (first commits))
-      #:last-updater (last commit-authors)
-      #:last-updated-date (commit-author-date (last commits))
       #:assigned (hashtable-ref file-details 'assigned '())
       ;; "closed" is a special keyword to indicate the open/closed
       ;; status of an issue.
@@ -393,9 +362,4 @@ gemtext file."
       #:open? (not (member "closed" all-keywords))
       #:tasks (hashtable-ref file-details 'tasks 0)
       #:completed-tasks (hashtable-ref file-details 'completed-tasks 0)
-      #:posts (map (lambda (commit author)
-                     (make <post>
-                       #:author author
-                       #:date (commit-author-date commit)))
-                   commits
-                   commit-authors))))
+      #:commits (file-document-commits file-document))))

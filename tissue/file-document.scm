@@ -17,20 +17,45 @@
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
 (define-module (tissue file-document)
+  #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-171)
+  #:use-module (git)
   #:use-module (oop goops)
   #:use-module (term ansi-color)
+  #:use-module (tissue commit)
   #:use-module (tissue document)
   #:use-module (tissue git)
+  #:use-module (tissue person)
   #:use-module (tissue utils)
   #:use-module (xapian xapian)
   #:export (<file-document>
             file-document-path
+            file-document-commits
+            file-document-creator
+            file-document-created-date
+            file-document-last-updater
+            file-document-last-updated-date
             read-gemtext-document))
 
 (define-class <file-document> (<document>)
-  (path #:accessor file-document-path #:init-keyword #:path))
+  (path #:accessor file-document-path #:init-keyword #:path)
+  ;; List of <commit> objects, oldest first.
+  (commits #:accessor file-document-commits #:init-keyword #:commits))
+
+(define file-document-creator
+  (compose doc:commit-author first file-document-commits))
+
+(define file-document-created-date
+  (compose doc:commit-author-date first file-document-commits))
+
+(define file-document-last-updater
+  (compose doc:commit-author last file-document-commits))
+
+(define file-document-last-updated-date
+  (compose doc:commit-author-date last file-document-commits))
 
 (define-method (document-type (document <file-document>))
   (next-method))
@@ -81,6 +106,10 @@ a list of search results."
                            ,@snippet))
                (list)))))
 
+(define file-modification-table-for-current-repository
+  (memoize-thunk
+   (cut file-modification-table (current-git-repository))))
+
 (define (read-gemtext-document file)
   "Read gemtext document from FILE. Return a <file-document> object."
   (make <file-document>
@@ -96,4 +125,11 @@ a list of search results."
                                     port)))
                 ;; Fallback to filename if document has no title.
                 file)
-    #:path file))
+    #:path file
+    #:commits (map (lambda (commit)
+                     (make <commit>
+                       #:author (resolve-alias (signature-name (commit-author commit))
+                                               (%aliases))
+                       #:author-date (commit-author-date commit)))
+                   (hashtable-ref (file-modification-table-for-current-repository)
+                                  file #f))))
