@@ -131,7 +131,7 @@ Log to LOG-PORT. When LOG-PORT is #f, do not log."
               (let ((output-file
                      (string-append output-directory "/" (file-name file))))
                 (when log-port
-                  (display output-file log-port)
+                  (display (file-name file) log-port)
                   (newline log-port))
                 (make-directories (dirname output-file))
                 (call-with-output-file output-file
