@@ -20,6 +20,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (tissue document)
   #:use-module (tissue issue)
+  #:use-module (tissue utils)
   #:use-module (xapian wrap)
   #:use-module ((xapian xapian) #:renamer (lambda (symbol)
                                             (case symbol
@@ -31,7 +32,7 @@
 
 (define (parse-query search-query)
   "Parse SEARCH-QUERY and return a xapian Query object."
-  (if (string-null? search-query)
+  (if (string-blank? search-query)
       (Query-MatchAll)
       (xapian:parse-query search-query
                           #:stemmer (make-stem "en")
