@@ -162,7 +162,7 @@ and further text, increase-termpos! must be called before indexing."
 result snippet."
   ;; Remove blank lines from document text.
   (string-join
-   (remove (cut string-every char-set:whitespace <>)
+   (remove string-blank?
            (string-split (document-text document)
                          #\newline))
    "\n"))
