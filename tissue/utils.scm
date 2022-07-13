@@ -23,6 +23,7 @@
   #:use-module (ice-9 filesystem)
   #:use-module (ice-9 popen)
   #:export (string-blank?
+            string-contains?
             string-remove-prefix
             string-remove-suffix
             human-date-string
@@ -35,6 +36,13 @@
 (define (string-blank? str)
   "Return #t if STR contains only whitespace. Else, return #f."
   (string-every char-set:whitespace str))
+
+(define (string-contains? str1 str2)
+  "Return #t if STR1 contains STR2. Else, return #f. This is different
+from string-contains in that it does not return the index in STR1
+where STR2 occurs as a substring."
+  (and (string-contains str1 str2)
+       #t))
 
 (define (string-remove-prefix prefix str)
   "Remove PREFIX from STR."
