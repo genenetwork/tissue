@@ -28,6 +28,7 @@
                                               ((parse-query) 'xapian:parse-query)
                                               (else symbol))))
   #:export (parse-query
+            boolean-query?
             search-fold
             search-map))
 
@@ -68,6 +69,33 @@ mapping field names to prefixes."
       (Query-MatchAll)
       (QueryParser-parse-query query-parser search-query)))
 
+(define term-ref TermIterator-get-term)
+
+(define (query-terms-every pred query)
+  "Test whether every term in QUERY satisfies PRED. If so, return the
+result of the last PRED call. If not, return #f. The calls to PRED are
+made successively on the first, second, third, etc. term, and stopped
+when PRED returns #f."
+  (let loop ((head (Query-get-terms-begin query))
+             (result #t))
+    (cond
+     ((TermIterator-equals head (Query-get-terms-end query))
+      result)
+     ((pred head)
+      => (lambda (result)
+           (TermIterator-next head)
+           (loop head result)))
+     (else #f))))
+
+(define (boolean-query? query)
+  "Return #t if QUERY contains only boolean terms. Else, return #f."
+  (query-terms-every (lambda (term)
+                       (any (match-lambda
+                              ((field . prefix)
+                               (string-contains? (term-ref term) prefix)))
+                            %boolean-prefixes))
+                     query))
+
 (define* (search-fold proc initial db search-query
                       #:key (offset 0) (maximum-items (database-document-count db)))
   "Search xapian database DB using SEARCH-QUERY and fold over the
@@ -88,7 +116,13 @@ return."
                      (MSetIterator-mset-get item)
                      result))
              initial
-             (enquire-mset (enquire db (parse-query search-query))
+             (enquire-mset (let* ((query (parse-query search-query))
+                                  (enquire (enquire db query)))
+                             ;; Sort by recency date (slot 0) when
+                             ;; query is strictly boolean.
+                             (when (boolean-query? query)
+                               (Enquire-set-sort-by-value enquire 0 #t))
+                             enquire)
                            #:maximum-items maximum-items)))
 
 (define* (search-map proc db search-query

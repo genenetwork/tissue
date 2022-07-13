@@ -287,12 +287,20 @@ STATE-DIRECTORY."
                   (sxml->html
                    (call-with-database (string-append state-directory "/" hostname "/xapian")
                      (lambda (db)
-                       (let ((mset (enquire-mset (enquire db (new-Query (Query-OP-FILTER)
-                                                                        (parse-query search-query)
-                                                                        (or (assq-ref filter-alist search-type)
-                                                                            (Query-MatchAll))))
-                                                 #:offset 0
-                                                 #:maximum-items (database-document-count db))))
+                       (let* ((query (new-Query (Query-OP-FILTER)
+                                                (parse-query search-query)
+                                                (or (assq-ref filter-alist search-type)
+                                                    (Query-MatchAll))))
+                              (mset (enquire-mset
+                                     (let ((enquire (enquire db query)))
+                                       ;; Sort by recency date (slot
+                                       ;; 0) when query is strictly
+                                       ;; boolean.
+                                       (when (boolean-query? query)
+                                         (Enquire-set-sort-by-value enquire 0 #t))
+                                       enquire)
+                                     #:offset 0
+                                     #:maximum-items (database-document-count db))))
                          (make-search-page
                           (reverse
                            (mset-fold (lambda (item result)

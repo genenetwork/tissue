@@ -3,3 +3,9 @@
 * tags: enhancement
 
 The search page with a blank query doubles as a listing of all issues and documents. So, it is nicer if that listing is ordered by creation date. With actual non-blank search queries, it is ok to sort by relevance as we already do.
+
+## Resolution
+
+This is now implemented both for the web UI and the CLI. It was a bit more involved than first met the eye. We had to sort by date not just for "blank queries", but for all queries that had only boolean search terms---for example, "tag:enhancement" and "tag:enhancement AND type:issue AND is:open". To do this, we first indexed boolean terms as such. Earlier, we were indexing them as free text. Then, we parsed search queries with some prefixes being marked out as boolean prefixes. Finally, we iterated through the terms in parsed queries and checked if they were all boolean terms. If they were, then we sorted results by date.
+
+* closed
