@@ -239,15 +239,13 @@ operators "
     ("svg" image/svg+xml)
     ("txt" text/plain)))
 
-(define (matches db search-query filter)
-  "Return the number of matches in DB for SEARCH-QUERY filtering with
-FILTER query."
+(define (matches db query filter)
+  "Return the number of matches in DB for QUERY filtering with FILTER
+query. QUERY and FILTER are Xapian Query objects."
   (MSet-get-matches-estimated
    (enquire-mset
     (enquire
-     db (new-Query (Query-OP-FILTER)
-                   (parse-query search-query)
-                   filter))
+     db (new-Query (Query-OP-FILTER) query filter))
     #:maximum-items (database-document-count db))))
 
 (define (handler request body hosts state-directory)
@@ -287,12 +285,13 @@ STATE-DIRECTORY."
                   (sxml->html
                    (call-with-database (string-append state-directory "/" hostname "/xapian")
                      (lambda (db)
-                       (let* ((query (new-Query (Query-OP-FILTER)
-                                                (parse-query search-query)
-                                                (or (assq-ref filter-alist search-type)
-                                                    (Query-MatchAll))))
+                       (let* ((query (parse-query search-query))
                               (mset (enquire-mset
-                                     (let ((enquire (enquire db query)))
+                                     (let* ((query (new-Query (Query-OP-FILTER)
+                                                              query
+                                                              (or (assq-ref filter-alist search-type)
+                                                                  (Query-MatchAll))))
+                                            (enquire (enquire db query)))
                                        ;; Sort by recency date (slot
                                        ;; 0) when query is strictly
                                        ;; boolean.
@@ -315,11 +314,11 @@ STATE-DIRECTORY."
                           (assq-ref host-parameters 'css)
                           #:page-uri-path path
                           #:page-uri-parameters parameters
-                          #:matches (matches db search-query (Query-MatchAll))
-                          #:matched-open-issues (matches db search-query (assq-ref filter-alist 'open-issue))
-                          #:matched-closed-issues (matches db search-query (assq-ref filter-alist 'closed-issue))
-                          #:matched-documents (matches db search-query (assq-ref filter-alist 'document))
-                          #:matched-commits (matches db search-query (assq-ref filter-alist 'commit))
+                          #:matches (matches db query (Query-MatchAll))
+                          #:matched-open-issues (matches db query (assq-ref filter-alist 'open-issue))
+                          #:matched-closed-issues (matches db query (assq-ref filter-alist 'closed-issue))
+                          #:matched-documents (matches db query (assq-ref filter-alist 'document))
+                          #:matched-commits (matches db query (assq-ref filter-alist 'commit))
                           #:current-search-type search-type))))))))
        ;; Static files
        ((let ((file-path
