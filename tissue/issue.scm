@@ -183,10 +183,11 @@ object representing a list of search results."
                   `(a (@ (href ,(string-append
                                  "/search?query="
                                  (uri-encode
-                                  ;; Hyphenate tag if it has
-                                  ;; spaces. Xapian accepts hyphenated
-                                  ;; strings as exact phrases.
-                                  (string-append "tag:" (sanitize-string tag)))))
+                                  ;; Quote tag if it has spaces.
+                                  (string-append "tag:"
+                                                 (if (string-any #\space tag)
+                                                     (string-append "\"" tag "\"")
+                                                     tag)))))
                          (class ,(string-append "tag"
                                                 (string-append " tag-" (sanitize-string tag))
                                                 (if (not (null? (lset-intersection
