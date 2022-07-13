@@ -18,6 +18,7 @@
 
 (define-module (tissue search)
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 match)
   #:use-module (tissue document)
   #:use-module (tissue issue)
   #:use-module (tissue utils)
@@ -30,20 +31,42 @@
             search-fold
             search-map))
 
+(define (make-query-parser stemmer prefixes boolean-prefixes)
+  "Return a query parser with STEMMER, PREFIXES and
+BOOLEAN-PREFIXES. PREFIXES and BOOLEAN-PREFIXES are association lists
+mapping field names to prefixes."
+  (let ((query-parser (new-QueryParser)))
+    (QueryParser-set-stemmer query-parser stemmer)
+    (for-each (match-lambda
+                ((field . prefix)
+                 (QueryParser-add-prefix query-parser field prefix)))
+              prefixes)
+    (for-each (match-lambda
+                ((field . prefix)
+                 (QueryParser-add-boolean-prefix query-parser field prefix)))
+              boolean-prefixes)
+    query-parser))
+
+(define %prefixes
+  '(("title" . "S")))
+
+(define %boolean-prefixes
+  '(("type" . "XT")
+    ("creator" . "A")
+    ("lastupdater" . "XA")
+    ("assigned" . "XI")
+    ("keyword" . "K")
+    ("tag" . "K")
+    ("is" . "XS")))
+
+(define query-parser
+  (make-query-parser (make-stem "en") %prefixes %boolean-prefixes))
+
 (define (parse-query search-query)
   "Parse SEARCH-QUERY and return a xapian Query object."
   (if (string-blank? search-query)
       (Query-MatchAll)
-      (xapian:parse-query search-query
-                          #:stemmer (make-stem "en")
-                          #:prefixes '(("type" . "XT")
-                                       ("title" . "S")
-                                       ("creator" . "A")
-                                       ("lastupdater" . "XA")
-                                       ("assigned" . "XI")
-                                       ("keyword" . "K")
-                                       ("tag" . "K")
-                                       ("is" . "XS")))))
+      (QueryParser-parse-query query-parser search-query)))
 
 (define* (search-fold proc initial db search-query
                       #:key (offset 0) (maximum-items (database-document-count db)))
