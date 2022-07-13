@@ -37,6 +37,7 @@
             document-type
             document-id-term
             document-text
+            document-recency-date
             document-term-generator
             document-snippet-source-text
             document-snippet
@@ -133,6 +134,7 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
 
 (define-generic document-id-term)
 (define-generic document-text)
+(define-generic document-recency-date)
 (define-generic print)
 (define-generic document->sxml)
 
@@ -151,7 +153,13 @@ and further text, increase-termpos! must be called before indexing."
           #:document (make-document
                       #:data (call-with-output-string
                                (cut write (object->scm document) <>))
-                      #:terms `((,(document-id-term document) . 0))))))
+                      #:terms `((,(document-id-term document) . 0))
+                      ;; This serialization of the recency date gets
+                      ;; the timezone ordering wrong. TODO: Replace it
+                      ;; with sortable-serialise once it is working in
+                      ;; guile-xapian.
+                      #:values `((0 . ,(date->iso-8601
+                                        (document-recency-date document))))))))
     (index-text! term-generator (document-type document) #:prefix "XT")
     (index-text! term-generator (document-title document) #:prefix "S")
     (index-text! term-generator (document-text document))

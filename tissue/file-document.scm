@@ -64,6 +64,10 @@
   "Return the ID term for DOCUMENT."
   (string-append "Qfile." (file-document-path document)))
 
+(define-method (document-recency-date (document <file-document>))
+  "Return a date representing the recency of DOCUMENT."
+  (file-document-last-updated-date document))
+
 (define-method (document-text (document <file-document>))
   "Return the full text of DOCUMENT."
   (call-with-file-in-git (current-git-repository) (file-document-path document)

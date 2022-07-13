@@ -42,6 +42,10 @@
   "Return the ID term for DOCUMENT."
   (string-append "Qcommit." (commit-hash commit)))
 
+(define-method (document-recency-date (commit <commit>))
+  "Return a date representing the recency of DOCUMENT"
+  (doc:commit-author-date commit))
+
 (define-method (document-term-generator (commit <commit>))
   "Return a term generator indexing COMMIT."
   (let ((term-generator (next-method)))
