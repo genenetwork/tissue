@@ -42,15 +42,14 @@
   "Return the ID term for DOCUMENT."
   (string-append "Qcommit." (commit-hash commit)))
 
+(define-method (document-boolean-terms (commit <commit>))
+  "Return the boolean terms in COMMIT."
+  (list (string-append "Qcommit." (commit-hash commit))
+        (string-append "A" (doc:commit-author commit))))
+
 (define-method (document-recency-date (commit <commit>))
   "Return a date representing the recency of DOCUMENT"
   (doc:commit-author-date commit))
-
-(define-method (document-term-generator (commit <commit>))
-  "Return a term generator indexing COMMIT."
-  (let ((term-generator (next-method)))
-    (index-person! term-generator (doc:commit-author commit) "A")
-    term-generator))
 
 (define-method (document-snippet-source-text (commit <commit>))
   "Return the source text for COMMIT from which to extract a search

@@ -58,19 +58,17 @@
   (tasks #:accessor issue-tasks #:init-keyword #:tasks)
   (completed-tasks #:accessor issue-completed-tasks #:init-keyword #:completed-tasks))
 
-(define-method (document-term-generator (issue <issue>))
-  "Return a term generator indexing ISSUE."
-  (let ((term-generator (next-method)))
-    (index-person! term-generator (file-document-creator issue) "A")
-    (index-person! term-generator (file-document-last-updater issue) "XA")
-    (for-each (cut index-person! term-generator <> "XI")
-              (issue-assigned issue))
-    (for-each (cut index-text! term-generator <> #:prefix "K")
-              (issue-keywords issue))
-    (index-text! term-generator
-                 (if (issue-open? issue) "open" "closed")
-                 #:prefix "XS")
-    term-generator))
+(define-method (document-boolean-terms (issue <issue>))
+  "Return the boolean terms in ISSUE."
+  (append (list (string-append "A" (file-document-creator issue))
+                (string-append "XA" (file-document-last-updater issue))
+                (string-append "XS" (if (issue-open? issue)
+                                        "open" "closed")))
+          (map (cut string-append "XI" <>)
+               (issue-assigned issue))
+          (map (cut string-append "K" <>)
+               (issue-keywords issue))
+          (next-method)))
 
 (define-method (print (issue <issue>) mset port)
   "Print ISSUE, an <issue> object, in search results."

@@ -36,6 +36,7 @@
             document-web-uri
             document-type
             document-id-term
+            document-boolean-terms
             document-text
             document-recency-date
             document-term-generator
@@ -142,6 +143,10 @@ that operates on a copy of OBJECT. It does not mutate OBJECT."
   (string-trim-both (symbol->string (class-name (class-of document)))
                     (char-set #\< #\>)))
 
+(define-method (document-boolean-terms (document <document>))
+  "Return the boolean terms in DOCUMENT."
+  (list))
+
 (define-method (document-term-generator (document <document>))
   "Return a term generator for DOCUMENT. The returned term generator has
 indexed the type and text of the document. If further free text is to
@@ -153,7 +158,9 @@ and further text, increase-termpos! must be called before indexing."
           #:document (make-document
                       #:data (call-with-output-string
                                (cut write (object->scm document) <>))
-                      #:terms `((,(document-id-term document) . 0))
+                      #:terms (map (cut cons <> 0)
+                                   (cons (document-id-term document)
+                                         (document-boolean-terms document)))
                       ;; This serialization of the recency date gets
                       ;; the timezone ordering wrong. TODO: Replace it
                       ;; with sortable-serialise once it is working in
