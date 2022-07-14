@@ -82,7 +82,7 @@ form { text-align: center; }
 }
 .search-result-title, .search-result-title:before { vertical-align: middle; }
 .search-result-commit .search-result-metadata:before,
-.search-result-document .search-result-title:before,
+.search-result-document .search-result-metadata:before,
 .search-result-issue .search-result-metadata:before {
     font-size: xx-small;
     font-weight: bold;
@@ -92,7 +92,7 @@ form { text-align: center; }
     color: white;
 }
 .search-result-commit .search-result-metadata:before { content: \"COMMIT\"; }
-.search-result-document .search-result-title:before { content: \"DOC\"; }
+.search-result-document .search-result-metadata:before { content: \"DOC\"; }
 .search-result-open-issue .search-result-metadata:before {
     content: \"ISSUE\";
     background-color: green;

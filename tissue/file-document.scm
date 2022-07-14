@@ -91,6 +91,25 @@ MSet object representing a list of search results."
   (display (colorize-string (file-document-path document) 'YELLOW)
            port)
   (newline port)
+  (display (string-append
+            "created "
+            (colorize-string (human-date-string
+                              (file-document-created-date document))
+                             'CYAN)
+            " by "
+            (colorize-string (file-document-creator document) 'CYAN))
+           port)
+  (when (> (length (file-document-commits document)) 1)
+    (display (string-append (colorize-string "," 'CYAN)
+                            " last updated "
+                            (colorize-string (human-date-string
+                                              (file-document-last-updated-date document))
+                                             'CYAN)
+                            " by "
+                            (colorize-string (file-document-last-updater document)
+                                             'CYAN))
+             port))
+  (newline port)
   (let ((snippet (document-snippet document mset)))
     (unless (string-null? snippet)
       (display snippet port)
@@ -104,6 +123,17 @@ a list of search results."
        (a (@ (href ,(document-web-uri document))
              (class "search-result-title"))
           ,(document-title document))
+       (div (@ (class "search-result-metadata"))
+            ,(string-append
+              (format #f "created ~a by ~a"
+                      (human-date-string (file-document-created-date document))
+                      (file-document-creator document))
+              (if (> (length (file-document-commits document))
+                     1)
+                  (format #f ", last updated ~a by ~a"
+                          (human-date-string (file-document-last-updated-date document))
+                          (file-document-last-updater document))
+                  "")))
        ,@(let ((snippet (document-sxml-snippet document mset)))
            (if snippet
                (list `(div (@ (class "search-result-snippet"))
