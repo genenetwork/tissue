@@ -104,7 +104,13 @@ form { text-align: center; }
 }
 .search-result-snippet { font-size: smaller; }
 
-a.tag {
+.tags {
+    list-style-type: none;
+    padding: 0;
+    display: inline;
+}
+.tag { display: inline; }
+.tag a {
     padding: 0.25em 0.4em;
     color: white;
     background-color: blue;
@@ -112,13 +118,13 @@ a.tag {
     margin: auto 0.25em;
     font-size: smaller;
 }
-a.tag-bug { background-color: red; }
-a.tag-feature { background-color: green; }
-a.tag-progress, a.tag-unassigned {
+.tag-bug a { background-color: red; }
+.tag-feature a { background-color: green; }
+.tag-progress a, .tag-unassigned a {
     background-color: orange;
     color: black;
 }
-a.tag-chore {
+.tag-chore a {
     background-color: khaki;
     color: black;
 }")

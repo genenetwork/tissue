@@ -178,17 +178,11 @@ object representing a list of search results."
        (a (@ (href ,(document-web-uri issue))
              (class "search-result-title"))
           ,(document-title issue))
-       ,@(map (lambda (tag)
-                (let ((words (string-split tag (char-set #\- #\space))))
-                  `(a (@ (href ,(string-append
-                                 "/search?query="
-                                 (uri-encode
-                                  ;; Quote tag if it has spaces.
-                                  (string-append "tag:"
-                                                 (if (string-any #\space tag)
-                                                     (string-append "\"" tag "\"")
-                                                     tag)))))
-                         (class ,(string-append "tag"
+       (ul (@ (class "tags"))
+           ,@(map (lambda (tag)
+                    (let ((words (string-split tag (char-set #\- #\space))))
+                      `(li (@ (class
+                                ,(string-append "tag"
                                                 (string-append " tag-" (sanitize-string tag))
                                                 (if (not (null? (lset-intersection
                                                                  string=? words
@@ -210,8 +204,16 @@ object representing a list of search results."
                                                                  (list "enhancement" "feature"))))
                                                     " tag-feature"
                                                     ""))))
-                      ,tag)))
-              (issue-keywords issue))
+                           (a (@ (href ,(string-append
+                                         "/search?query="
+                                         (uri-encode
+                                          ;; Quote tag if it has spaces.
+                                          (string-append "tag:"
+                                                         (if (string-any #\space tag)
+                                                             (string-append "\"" tag "\"")
+                                                             tag))))))
+                              ,tag))))
+                  (issue-keywords issue)))
        (div (@ (class "search-result-metadata"))
             ,(string-append
               (format #f "opened ~a by ~a"
