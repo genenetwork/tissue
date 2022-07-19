@@ -183,7 +183,9 @@ operators "
                  " and "
                  (span (@ (class "search-filter"))
                        "OR")
-                 "."))
+                 ". See " (a (@ (href "https://xapian.org/docs/queryparser.html"))
+                             "Xapian::QueryParser Syntax")
+                 " for detailed documentation."))
      ,(let ((search-result-statistic
              (lambda (search-type format-string matches)
                `(li (a (@ (href ,(string-append
