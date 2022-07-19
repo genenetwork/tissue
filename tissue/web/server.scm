@@ -79,24 +79,15 @@ form { text-align: center; }
     text-decoration: none;
     font-size: larger;
 }
-.search-result-title, .search-result-title:before { vertical-align: middle; }
-.search-result-commit .search-result-metadata:before,
-.search-result-document .search-result-metadata:before,
-.search-result-issue .search-result-metadata:before {
+.document-type {
     font-size: xx-small;
     font-weight: bold;
-    margin: 0 0.2em;
-    padding: 0 0.4em;
+    padding: 0 0.2em;
     background-color: darkmagenta;
     color: white;
+    text-transform: uppercase;
 }
-.search-result-commit .search-result-metadata:before { content: \"COMMIT\"; }
-.search-result-document .search-result-metadata:before { content: \"DOC\"; }
-.search-result-open-issue .search-result-metadata:before {
-    content: \"ISSUE\";
-    background-color: green;
-}
-.search-result-closed-issue .search-result-metadata:before { content: \"✓ ISSUE\"; }
+.open-issue-document-type { background-color: green; }
 .search-result-metadata {
     color: dimgray;
     font-size: smaller;

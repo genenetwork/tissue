@@ -98,8 +98,10 @@ object representing a list of search results."
              (class "search-result-title"))
           ,(document-title commit))
        (div (@ (class "search-result-metadata"))
+            (span (@ (class ,(string-append "document-type commit-document-type")))
+                  "commit")
             ,(string-append
-              (format #f "authored ~a by ~a"
+              (format #f " authored ~a by ~a"
                       (human-date-string (doc:commit-author-date commit))
                       (doc:commit-author commit))))
        ,@(let ((snippet (document-sxml-snippet commit mset)))

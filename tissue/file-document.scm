@@ -124,8 +124,10 @@ a list of search results."
              (class "search-result-title"))
           ,(document-title document))
        (div (@ (class "search-result-metadata"))
+            (span (@ (class ,(string-append "document-type file-document-type")))
+                  "document")
             ,(string-append
-              (format #f "created ~a by ~a"
+              (format #f " created ~a by ~a"
                       (human-date-string (file-document-created-date document))
                       (file-document-creator document))
               (if (> (length (file-document-commits document))

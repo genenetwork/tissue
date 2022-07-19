@@ -215,8 +215,15 @@ object representing a list of search results."
                               ,tag))))
                   (issue-keywords issue)))
        (div (@ (class "search-result-metadata"))
+            (span (@ (class ,(string-append "document-type issue-document-type "
+                                            (if (issue-open? issue)
+                                                "open-issue-document-type"
+                                                "closed-issue-document-type"))))
+                  ,(if (issue-open? issue)
+                       "issue"
+                       "✓ issue"))
             ,(string-append
-              (format #f "opened ~a by ~a"
+              (format #f " opened ~a by ~a"
                       (human-date-string (file-document-created-date issue))
                       (file-document-creator issue))
               (if (> (length (file-document-commits issue))
