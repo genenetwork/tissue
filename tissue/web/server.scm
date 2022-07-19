@@ -111,10 +111,9 @@ form { text-align: center; }
 }
 .tag { display: inline; }
 .tag a {
-    padding: 0.25em 0.4em;
+    padding: 0 0.2em;
     color: white;
     background-color: blue;
-    border-radius: 0.5em;
     margin: auto 0.25em;
     font-size: smaller;
 }
