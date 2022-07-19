@@ -56,7 +56,6 @@ form { text-align: center; }
 .search-filter {
     background-color: gray;
     color: white;
-    border-radius: 0.2em;
     padding: 0 0.2em;
 }
 
