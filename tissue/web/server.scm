@@ -333,16 +333,8 @@ STATE-DIRECTORY."
              (values `((content-type . ,(or (assoc-ref %mime-types (string-remove-prefix
                                                                     "." (file-name-extension file-path)))
                                             '(application/octet-stream))))
-                     ;; Return a procedure so that the file can be
-                     ;; read out a little at a time instead of having
-                     ;; to load it whole into memory.
-                     (lambda (out)
-                       (call-with-input-file file-path
-                         (lambda (in)
-                           (port-transduce (tmap (cut put-bytevector out <>))
-                                           (const #t)
-                                           get-bytevector-some
-                                           in)))))))
+                     (call-with-input-file file-path
+                       get-bytevector-all))))
        ;; Not found
        (else
         (values (build-response #:code 404)
