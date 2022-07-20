@@ -247,7 +247,7 @@ query. QUERY and FILTER are Xapian Query objects."
 
 (define (handler request body hosts state-directory)
   "Handle web REQUEST with BODY and return two values---the response
-headers and body.
+headers and the body.
 
 See `start-web-server' for documentation of HOSTS and
 STATE-DIRECTORY."
