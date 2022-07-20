@@ -62,6 +62,15 @@ exec guile --no-auto-compile -s "$0" "$@"
 (define (unrecognized-argument arg loads)
   (error "Unrecognized argument" arg))
 
+(define listen-repl-option
+  (option '("listen-repl")
+          #t #f
+          (lambda (opt name arg result)
+            (acons 'listen-repl
+                   (or (string->number arg)
+                       arg)
+                   result))))
+
 (define (command-line-program)
   "Return the name, that is arg0, of the command-line program invoked
 to run tissue."
@@ -212,6 +221,23 @@ command-line arguments ARGS.
                     `(("localhost"
                        (upstream-repository . ,(git-top-level)))))))))
 
+(define (start-repl socket-or-port)
+  "Start REPL listening on SOCKET-OR-PORT. Assume SOCKET-OR-PORT is a
+Unix socket if it is a string. Else, assume it is a numerical TCP
+port."
+  (spawn-server
+   (cond
+    ((string? socket-or-port)
+     (format (current-error-port)
+             "REPL server listening on ~a~%"
+             socket-or-port)
+     (make-unix-domain-server-socket #:path socket-or-port))
+    (else
+     (format (current-error-port)
+             "REPL server listening on port ~a~%"
+             socket-or-port)
+     (make-tcp-server-socket #:port socket-or-port)))))
+
 (define tissue-web
   (match-lambda*
     (("--help")
@@ -224,13 +250,7 @@ Serve repositories specified in CONFIG-FILE over HTTP.
              (command-line-program)))
     (args
      (let ((args (args-fold args
-                            (list (option '("listen-repl")
-                                          #t #f
-                                          (lambda (opt name arg result)
-                                            (acons 'listen-repl
-                                                   (or (string->number arg)
-                                                       arg)
-                                                   result)))
+                            (list listen-repl-option
                                   (option '(#\C "config")
                                           #t #f
                                           (lambda (opt name config-file result)
@@ -240,19 +260,8 @@ Serve repositories specified in CONFIG-FILE over HTTP.
                             invalid-option
                             unrecognized-argument
                             (default-configuration))))
-       (let ((listen-repl (assq-ref args 'listen-repl)))
-         (when listen-repl
-           (spawn-server (cond
-                          ((string? listen-repl)
-                           (format (current-error-port)
-                                   "REPL server listening on ~a~%"
-                                   listen-repl)
-                           (make-unix-domain-server-socket #:path listen-repl))
-                          (else
-                           (format (current-error-port)
-                                   "REPL server listening on port ~a~%"
-                                   listen-repl)
-                           (make-tcp-server-socket #:port listen-repl))))))
+       (when (assq-ref args 'listen-repl)
+         (start-repl (assq-ref args 'listen-repl)))
        (start-web-server (listen->socket-address (assq-ref args 'listen))
                          (map (match-lambda
                                 ((name parameters ...)
