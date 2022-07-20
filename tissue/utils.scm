@@ -81,10 +81,10 @@ directory after THUNK returns."
                   thunk
                   (cut chdir original-current-directory))))
 
-(define (call-with-temporary-directory proc)
-  "Call PROC with a new temporary directory, and delete it when PROC
-returns or exits non-locally."
-  (let ((temporary-directory (mkdtemp "XXXXXX")))
+(define* (call-with-temporary-directory proc #:optional (parent-directory (getcwd)))
+  "Call PROC with a new temporary directory in PARENT-DIRECTORY, and
+delete it when PROC returns or exits non-locally."
+  (let ((temporary-directory (mkdtemp (string-append parent-directory "/XXXXXX"))))
     (dynamic-wind (const #t)
                   (cut proc temporary-directory)
                   (lambda ()
