@@ -19,6 +19,7 @@
 (define-module (tissue git)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (rnrs conditions)
+  #:use-module (rnrs exceptions)
   #:use-module (rnrs hashtables)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
@@ -42,6 +43,7 @@
             %current-git-repository
             current-git-repository
             commit-author-date
+            git-tracked-file?
             git-tracked-files
             call-with-file-in-git
             file-modification-table
@@ -107,6 +109,17 @@ directory."
                 0
                 (time-time time))
      (* 60 (time-offset time)))))
+
+(define (git-tracked-file? path repository)
+  "Return non-#f if PATH is a file tracked in REPOSITORY. Else, return
+#f."
+  (guard (c ((let ((git-error (condition-git-error c)))
+               (and git-error
+                    (= (git-error-code git-error)
+                       GIT_ENOTFOUND)))
+             #f))
+    (tree-entry-bypath (head-tree repository)
+                       path)))
 
 (define* (git-tracked-files #:optional (repository (current-git-repository)))
   "Return a list of all files and directories tracked in REPOSITORY. The
