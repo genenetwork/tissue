@@ -272,6 +272,32 @@ Serve repositories specified in CONFIG-FILE over HTTP.
                                              ,@parameters))))))
                               (assq-ref args 'hosts)))))))
 
+(define tissue-web-build
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a web-build WEBSITE-DIRECTORY
+Build website of current repository.
+"
+             (command-line-program)))
+    ((website-directory)
+     (let ((config (load-config)))
+       (guard (c (else (format (current-error-port)
+                               "Building website failed.~%")
+                       (raise c)))
+         (call-with-temporary-directory
+          (lambda (temporary-output-directory)
+            (build-website (git-top-level)
+                           temporary-output-directory
+                           (tissue-configuration-web-css config)
+                           (tissue-configuration-web-files config))
+            (delete-file-recursively website-directory)
+            (rename-file temporary-output-directory
+                         website-directory)
+            (chmod website-directory #o755))
+          (dirname website-directory))))
+     (format (current-error-port)
+             "Built website.~%"))))
+
 ;; This is a noop, since the index is built on any tissue command. It
 ;; exists just for the --help usage summary.
 (define tissue-index
@@ -292,6 +318,7 @@ COMMAND must be one of the sub-commands listed below:
   search    search issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
+  web-build build website of current repository
   web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
   index     index files
@@ -469,6 +496,7 @@ Pull latest from upstream repositories.
                         ("show" tissue-show)
                         ("repl" tissue-repl)
                         ("index" tissue-index)
+                        ("web-build" tissue-web-build)
                         (invalid-command
                          (format (current-error-port) "Invalid command `~a'~%~%"
                                  invalid-command)
