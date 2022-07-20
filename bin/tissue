@@ -256,17 +256,21 @@ Serve repositories specified in CONFIG-FILE over HTTP.
        (start-web-server (listen->socket-address (assq-ref args 'listen))
                          (map (match-lambda
                                 ((name parameters ...)
-                                 ;; Set CSS for each host.
-                                 (parameterize ((%current-git-repository
-                                                 (repository-open
-                                                  (string-append (assq-ref args 'state-directory)
-                                                                 "/" name "/repository"))))
-                                   (cons name
-                                         (acons 'css
-                                                (tissue-configuration-web-css (load-config))
-                                                parameters)))))
-                              (assq-ref args 'hosts))
-                         (assq-ref args 'state-directory))))))
+                                 ;; Add CSS, repository directory,
+                                 ;; website directory, xapian
+                                 ;; directory settings for each host.
+                                 (let* ((state-directory (assq-ref args 'state-directory))
+                                        (repository-directory
+                                         (string-append state-directory "/" name "/repository")))
+                                   (parameterize ((%current-git-repository
+                                                   (repository-open repository-directory)))
+                                     (cons name
+                                           `((css . ,(tissue-configuration-web-css (load-config)))
+                                             (repository-directory . ,repository-directory)
+                                             (website-directory . ,(string-append state-directory "/" name "/website"))
+                                             (xapian-directory . ,(string-append state-directory "/" name "/xapian"))
+                                             ,@parameters))))))
+                              (assq-ref args 'hosts)))))))
 
 ;; This is a noop, since the index is built on any tissue command. It
 ;; exists just for the --help usage summary.

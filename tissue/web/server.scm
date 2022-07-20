@@ -245,12 +245,11 @@ query. QUERY and FILTER are Xapian Query objects."
      db (new-Query (Query-OP-FILTER) query filter))
     #:maximum-items (database-document-count db))))
 
-(define (handler request body hosts state-directory)
+(define (handler request body hosts)
   "Handle web REQUEST with BODY and return two values---the response
 headers and the body.
 
-See `start-web-server' for documentation of HOSTS and
-STATE-DIRECTORY."
+See `start-web-server' for documentation of HOSTS."
   (let* ((path (uri-path (request-uri request)))
          (parameters (query-parameters (uri-query (request-uri request))))
          (hostname (match (assq-ref (request-headers request) 'host)
@@ -264,7 +263,7 @@ STATE-DIRECTORY."
             path)
     (parameterize ((%current-git-repository
                     (repository-open
-                     (string-append state-directory "/" hostname "/repository"))))
+                     (assq-ref host-parameters 'repository-directory))))
       (cond
        ;; Search page
        ((member path (list "/" "/search"))
@@ -280,7 +279,7 @@ STATE-DIRECTORY."
                                (document . ,(parse-query "type:document")))))
           (values '((content-type . (text/html)))
                   (sxml->html
-                   (call-with-database (string-append state-directory "/" hostname "/xapian")
+                   (call-with-database (assq-ref host-parameters 'xapian-directory)
                      (lambda (db)
                        (let* ((query (parse-query search-query))
                               (mset (enquire-mset
@@ -321,12 +320,14 @@ STATE-DIRECTORY."
        ((let ((file-path
                (find file-exists?
                      ;; Try path and path.html.
-                     (list (string-append state-directory "/" hostname "/website" path)
-                           (string-append state-directory "/" hostname "/website" path ".html")))))
+                     (list (string-append (assq-ref host-parameters 'website-directory)
+                                          "/" path)
+                           (string-append (assq-ref host-parameters 'website-directory)
+                                          "/" path ".html")))))
           (and file-path
                ;; Check that the file really is within the document
                ;; root.
-               (string-prefix? (string-append state-directory "/" hostname "/website/")
+               (string-prefix? (string-append (assq-ref host-parameters 'website-directory) "/")
                                (canonicalize-path file-path))
                (canonicalize-path file-path)))
         => (lambda (file-path)
@@ -341,12 +342,11 @@ STATE-DIRECTORY."
                 (string-append "Resource not found: "
                                (uri->string (request-uri request)))))))))
 
-(define (start-web-server socket-address hosts state-directory)
+(define (start-web-server socket-address hosts)
   "Start web server listening on SOCKET-ADDRESS.
 
 HOSTS is an association list mapping host names to another association
-list containing parameters for that host. STATE-DIRECTORY is the path
-to the tissue state directory."
+list containing parameters for that host."
   (format (current-error-port)
           "Tissue web server listening on ~a~%"
           (cond
@@ -370,7 +370,7 @@ to the tissue state directory."
                 ;; variable each time so as to support live hacking.
                 ((module-ref (resolve-module '(tissue web server))
                              'handler)
-                 request body hosts state-directory))
+                 request body hosts))
               'http
               (cond
                ;; IPv4 or IPv6 address
