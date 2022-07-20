@@ -128,13 +128,25 @@ and do not have a leading slash."
   (tree-list (head-tree repository)))
 
 (define (call-with-file-in-git repository path proc)
-  "Call PROC on an input port reading contents of PATH in REPOSITORY."
-  (let* ((path-tree-entry (tree-entry-bypath (head-tree repository)
-                                             path))
-         (path-object (tree-entry->object repository path-tree-entry))
-         (blob (blob-lookup repository (object-id path-object))))
-    (call-with-port (open-bytevector-input-port (blob-content blob))
-      proc)))
+  "Call PROC on an input port reading contents of PATH. PATH may refer
+to a file on the filesystem or in REPOSITORY."
+  (let ((file-path (if (absolute-file-name? path)
+                       ;; Treat absolute paths verbatim.
+                       path
+                       ;; Treat relative paths as relative to the
+                       ;; top-level of the git repository.
+                       (string-append (dirname (repository-directory repository))
+                                      "/" path))))
+    (if (file-exists? file-path)
+        ;; If file exists on the filesystem, read it.
+        (call-with-input-file file-path proc)
+        ;; Else, read the file from the repository.
+        (let* ((path-tree-entry (tree-entry-bypath (head-tree repository)
+                                                   path))
+               (path-object (tree-entry->object repository path-tree-entry))
+               (blob (blob-lookup repository (object-id path-object))))
+          (call-with-port (open-bytevector-input-port (blob-content blob))
+            proc)))))
 
 (define (commit-deltas repository commit)
   "Return the list of <diff-delta> objects created by COMMIT with
