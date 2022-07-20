@@ -347,17 +347,14 @@ HOSTNAME."
                                         ;; HEAD is already up to date
                                         ;; with remote HEAD.
                                         (format (current-error-port)
-                                                "~a is already up to date.~%"
-                                                (canonicalize-path repository-directory))
+                                                "Repository is already up to date.~%")
                                         ;; Fast-forward local HEAD.
                                         (begin
                                           (reference-set-target!
                                            (reference-lookup repository head)
                                            (reference-name->oid repository remote-head))
                                           (format (current-error-port)
-                                                  "Pulled latest changes from ~a into ~a~%"
-                                                  upstream-repository
-                                                  (canonicalize-path repository-directory)))))
+                                                  "Pulled latest changes.~%"))))
                                   repository)
                                 ;; Clone repository if it is not already.
                                 (begin
@@ -366,9 +363,7 @@ HOSTNAME."
                                                 repository-directory
                                                 (clone-options #:bare? #t))))
                                     (format (current-error-port)
-                                            "Cloned ~a into ~a~%"
-                                            upstream-repository
-                                            (canonicalize-path repository-directory))
+                                            "Cloned upstream repository.~%")
                                     repository)))))
               (let ((config (load-config)))
                 (parameterize ((%aliases (tissue-configuration-aliases config))
@@ -377,9 +372,7 @@ HOSTNAME."
                   (let ((xapian-directory "xapian"))
                     (index xapian-directory)
                     (format (current-error-port)
-                            "Indexed ~a at ~a~%"
-                            (canonicalize-path repository-directory)
-                            (canonicalize-path xapian-directory)))
+                            "Indexed latest changes.~%"))
                   ;; Build website.
                   (let ((website-directory "website"))
                     (guard (c (else (format (current-error-port)
@@ -396,9 +389,7 @@ HOSTNAME."
                                       website-directory)
                          (chmod website-directory #o755))))
                     (format (current-error-port)
-                            "Built website for ~a at ~a~%"
-                            hostname
-                            (canonicalize-path website-directory))))))))))))
+                            "Built website.~%")))))))))))
 
 (define tissue-pull
   (match-lambda*
