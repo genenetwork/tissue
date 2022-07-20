@@ -307,6 +307,39 @@ Build website of current repository.
      (format (current-error-port)
              "Built website.~%"))))
 
+(define tissue-web-dev
+  (match-lambda*
+    (("--help")
+     (format #t "Usage: ~a web-dev WEBSITE-DIRECTORY
+Serve current repository over HTTP.
+
+  --port=PORT       run web server listening on PORT (default: 8080)
+  --listen-repl=P   run REPL server listening on port or path P
+"
+             (command-line-program)))
+    (args
+     (let ((args (args-fold args
+                            (list listen-repl-option
+                                  (option '("port")
+                                          #t #f
+                                          (lambda (opt name arg result)
+                                            (acons 'port
+                                                   (string->number arg)
+                                                   result))))
+                            invalid-option
+                            (lambda (arg result)
+                              (acons 'website-directory arg result))
+                            '((port . 8080)))))
+       (when (assq-ref args 'listen-repl)
+         (start-repl (assq-ref args 'listen-repl)))
+       (start-web-server (make-socket-address
+                          AF_INET (inet-pton AF_INET "127.0.0.1") (assq-ref args 'port))
+                         `(("localhost"
+                            (css . ,(tissue-configuration-web-css (load-config)))
+                            (repository-directory . ,(repository-directory (current-git-repository)))
+                            (website-directory . ,(assq-ref args 'website-directory))
+                            (xapian-directory . ,%xapian-index))))))))
+
 ;; This is a noop, since the index is built on any tissue command. It
 ;; exists just for the --help usage summary.
 (define tissue-index
@@ -328,6 +361,7 @@ COMMAND must be one of the sub-commands listed below:
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
   web-build build website of current repository
+  web-dev   serve current repository over HTTP
   web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
   index     index files
@@ -506,6 +540,7 @@ Pull latest from upstream repositories.
                         ("repl" tissue-repl)
                         ("index" tissue-index)
                         ("web-build" tissue-web-build)
+                        ("web-dev" tissue-web-dev)
                         (invalid-command
                          (format (current-error-port) "Invalid command `~a'~%~%"
                                  invalid-command)
