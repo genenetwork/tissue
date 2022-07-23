@@ -76,8 +76,8 @@ form { text-align: center; }
 }
 .search-result a { text-decoration: none; }
 .document-type {
+    font-variant: small-caps;
     font-weight: bold;
-    text-transform: uppercase;
 }
 .search-result-metadata {
     color: dimgray;
