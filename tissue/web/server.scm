@@ -76,14 +76,9 @@ form { text-align: center; }
 }
 .search-result a { text-decoration: none; }
 .document-type {
-    font-size: xx-small;
     font-weight: bold;
-    padding: 0 0.2em;
-    background-color: darkmagenta;
-    color: white;
     text-transform: uppercase;
 }
-.open-issue-document-type { background-color: green; }
 .search-result-metadata {
     color: dimgray;
     font-size: smaller;
