@@ -52,7 +52,6 @@ body {
 }
 
 form { text-align: center; }
-.search-hint { line-height: 2em; }
 .search-filter {
     background-color: gray;
     color: white;
