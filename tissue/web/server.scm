@@ -74,10 +74,7 @@ form { text-align: center; }
     list-style-type: none;
     padding: 0.5em;
 }
-.search-result a {
-    text-decoration: none;
-    font-size: larger;
-}
+.search-result a { text-decoration: none; }
 .document-type {
     font-size: xx-small;
     font-weight: bold;
