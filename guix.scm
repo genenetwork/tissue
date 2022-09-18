@@ -16,13 +16,42 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with tissue.  If not, see <https://www.gnu.org/licenses/>.
 
-(use-modules (guix build-system gnu)
+(use-modules ((gnu packages autotools) #:select (autoconf automake))
+             ((gnu packages gettext) #:select (gnu-gettext))
+             ((gnu packages guile) #:select (guile-3.0 guile-git))
+             ((gnu packages guile-xyz) #:select (guile-filesystem guile-xapian))
+             ((gnu packages skribilo) #:prefix guix:)
+             (guix build-system gnu)
              (guix gexp)
              (guix git-download)
              ((guix licenses) #:prefix license:)
              (guix packages))
 
 (define %source-dir (dirname (current-filename)))
+
+;; tissue requires an unreleased version of skribilo for its gemtext
+;; reader.
+(define-public skribilo-latest
+  (let ((commit "621eb1945aec8f26f5aee4bdf896f2434e145182")
+        (revision "1"))
+    (package
+      (inherit guix:skribilo)
+      (name "skribilo")
+      (version (git-version "0.9.5" revision commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "https://git.savannah.gnu.org/git/skribilo.git")
+                      (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "16rdcvszl9x183y32hjdwns0lkrvkmwd2fsshymspb12k4cxj6i4"))))
+      (native-inputs
+       (modify-inputs (package-native-inputs guix:skribilo)
+         (prepend autoconf)
+         (prepend automake)
+         (prepend gnu-gettext))))))
 
 (define tissue
   (package
@@ -57,6 +86,10 @@
                          `("GUILE_LOAD_COMPILED_PATH" prefix
                            (,(string-append out "/lib/guile/" effective-version "/site-ccache")
                             ,(getenv "GUILE_LOAD_COMPILED_PATH")))))))))))
+    (inputs
+     (list guile-3.0 guile-filesystem guile-git guile-xapian))
+    (propagated-inputs
+     (list skribilo-latest))
     (home-page "https://tissue.systemreboot.net")
     (synopsis "Text based issue tracker")
     (description "tissue is a text based issue tracker.")
