@@ -311,7 +311,7 @@ Build website of current repository.
   (match-lambda*
     (("--help")
      (format #t "Usage: ~a web-dev WEBSITE-DIRECTORY
-Serve current repository over HTTP.
+Serve built website and issues of current repository.
 
   --port=PORT       run web server listening on PORT (default: 8080)
   --listen-repl=P   run REPL server listening on port or path P
@@ -349,7 +349,7 @@ COMMAND must be one of the sub-commands listed below:
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
   web-build build website of current repository
-  web-dev   serve current repository over HTTP
+  web-dev   serve built website and issues of current repository
   web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
 
