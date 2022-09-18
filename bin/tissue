@@ -77,6 +77,9 @@ to run tissue."
   (match (command-line)
     ((program _ ...) program)))
 
+(define-condition-type &user-error-condition &serious
+  make-user-error-condition user-error-condition?)
+
 (define tissue-search
   (match-lambda*
     (("--help")
