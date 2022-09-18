@@ -506,7 +506,12 @@ Pull latest from upstream repositories.
              => (lambda (git-error)
                   (display (git-error-message git-error) (current-error-port))
                   (newline (current-error-port))
-                  (exit #f))))
+                  (exit #f)))
+            ((and (user-error-condition? c)
+                  (message-condition? c))
+             (display (condition-message c) (current-error-port))
+             (newline (current-error-port))
+             (exit #f)))
     (match args
       ((_ (or "-h" "--help"))
        (print-usage))
