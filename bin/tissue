@@ -340,18 +340,6 @@ Serve current repository over HTTP.
                             (website-directory . ,(assq-ref args 'website-directory))
                             (xapian-directory . ,%xapian-index))))))))
 
-;; This is a noop, since the index is built on any tissue command. It
-;; exists just for the --help usage summary.
-(define tissue-index
-  (match-lambda*
-    (("--help")
-     (format #t "Usage: ~a index
-Index files in repository.
-
-"
-             (command-line-program)))
-    (() #t)))
-
 (define (print-usage)
   (format #t "Usage: ~a COMMAND [OPTIONS] [ARGS]
 
@@ -364,7 +352,6 @@ COMMAND must be one of the sub-commands listed below:
   web-dev   serve current repository over HTTP
   web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
-  index     index files
 
 To get usage information for one of these sub-commands, run
   ~a COMMAND --help
@@ -538,7 +525,6 @@ Pull latest from upstream repositories.
                         ("search" tissue-search)
                         ("show" tissue-show)
                         ("repl" tissue-repl)
-                        ("index" tissue-index)
                         ("web-build" tissue-web-build)
                         ("web-dev" tissue-web-dev)
                         (invalid-command
