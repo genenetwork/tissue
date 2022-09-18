@@ -348,8 +348,12 @@ COMMAND must be one of the sub-commands listed below:
   search    search issues
   show      show the text of an issue
   repl      run a Guile script in a tissue environment
+
+Develop:
   web-build build website of current repository
   web-dev   serve built website and issues of current repository
+
+Deploy:
   web       serve one or more repositories over HTTP
   pull      pull latest from upstream repositories
 
