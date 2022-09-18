@@ -40,6 +40,11 @@
            #:phases
            (with-imported-modules '((guix build guile-build-system))
              #~(modify-phases %standard-phases
+                 (replace 'patch-source-shebangs
+                   (lambda* (#:key inputs #:allow-other-keys)
+                     (substitute* "bin/tissue"
+                       (("^exec guile")
+                        (string-append "exec " (search-input-file inputs "/bin/guile"))))))
                  (delete 'configure)
                  (add-after 'install 'wrap
                    (lambda* (#:key inputs outputs #:allow-other-keys)
