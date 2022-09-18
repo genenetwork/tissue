@@ -333,6 +333,9 @@ Serve built website and issues of current repository.
                             (lambda (arg result)
                               (acons 'website-directory arg result))
                             '((port . 8080)))))
+       (unless (assq-ref args 'website-directory)
+         (raise (condition (make-user-error-condition)
+                           (make-message-condition "Argument WEBSITE-DIRECTORY is required."))))
        (when (assq-ref args 'listen-repl)
          (start-repl (assq-ref args 'listen-repl)))
        (start-web-server (make-socket-address
